@@ -1,0 +1,68 @@
+﻿@model TestAutomationPlatform.Models.ScriptFormViewModel
+
+@{
+    ViewData["Title"] = "Nieuw Script";
+}
+
+<div class="container mt-4">
+    <div class="mb-4">
+        <h2 class="mb-1">Nieuw Script</h2>
+        <p class="text-muted mb-0">Voeg een nieuw testscript toe aan het platform</p>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body">
+            <form asp-controller="Scripts" asp-action="Create" method="post">
+                @Html.AntiForgeryToken()
+
+                <div class="mb-3">
+                    <label asp-for="Name" class="form-label">Script naam</label>
+                    <input asp-for="Name" class="form-control" placeholder="Bijv. Google Title Test" />
+                    <span asp-validation-for="Name" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="WorkspaceId" class="form-label">Workspace</label>
+                    <select asp-for="WorkspaceId" asp-items="Model.Workspaces" class="form-select">
+                        <option value="">-- Kies een workspace --</option>
+                    </select>
+                    <span asp-validation-for="WorkspaceId" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="TestSuiteId" class="form-label">TestSuite</label>
+                    <select asp-for="TestSuiteId" asp-items="Model.TestSuites" class="form-select">
+                        <option value="">-- Kies een testsuite --</option>
+                    </select>
+                    <span asp-validation-for="TestSuiteId" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="CategoryId" class="form-label">Categorie</label>
+                    <select asp-for="CategoryId" asp-items="Model.Categories" class="form-select">
+                        <option value="">-- Kies een categorie --</option>
+                    </select>
+                    <span asp-validation-for="CategoryId" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Code" class="form-label">Script JSON</label>
+                    <textarea asp-for="Code" class="form-control" rows="12" placeholder='[{"action":"goto","value":"https://google.com"},{"action":"asserttitle","value":"Google"}]'></textarea>
+                    <span asp-validation-for="Code" class="text-danger"></span>
+                    <small class="text-muted">
+                        Gebruik JSON-stappen zoals goto, click, fill en asserttitle.
+                    </small>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-success">Opslaan</button>
+                    <a asp-controller="Scripts" asp-action="Index" class="btn btn-secondary">Terug</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
