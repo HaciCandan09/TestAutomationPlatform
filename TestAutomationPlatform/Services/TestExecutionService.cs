@@ -12,7 +12,7 @@ public class TestExecutionService
         _parser = parser;
     }
 
-    public async Task<(string status, string log, double time)> RunScript(string scriptJson)
+    public async Task<(string status, string log, double time, string screenshotPath)> RunScript(string scriptJson)
     {
         Console.WriteLine("RunScript gestart!");
 
@@ -23,10 +23,10 @@ public class TestExecutionService
         var screenshotsPath = Path.Combine(basePath, "Screenshots");
         Directory.CreateDirectory(screenshotsPath);
 
-        var runFolder = Path.Combine(screenshotsPath, $"run_{DateTime.Now.Ticks}");
+        // 🔥 BELANGRIJK: alleen foldernaam opslaan
+        var folderName = $"run_{DateTime.Now.Ticks}";
+        var runFolder = Path.Combine(screenshotsPath, folderName);
         Directory.CreateDirectory(runFolder);
-
-        File.WriteAllText(Path.Combine(runFolder, "test.txt"), "werkt");
 
         IPage? page = null;
         IBrowser? browser = null;
@@ -44,15 +44,6 @@ public class TestExecutionService
             });
 
             page = await browser.NewPageAsync();
-
-            await page.GotoAsync("https://google.com");
-
-            await page.ScreenshotAsync(new()
-            {
-                Path = Path.Combine(runFolder, "test.png")
-            });
-
-            Console.WriteLine("Test screenshot gemaakt!");
 
             int stepIndex = 0;
 
@@ -102,6 +93,19 @@ public class TestExecutionService
                         await SafeScreenshot(page, runFolder, $"step_{stepIndex}_fill.png");
                         break;
 
+                    case "press":
+                        if (string.IsNullOrWhiteSpace(step.Selector))
+                            throw new Exception($"Stap {stepIndex}: Selector ontbreekt voor press.");
+
+                        if (string.IsNullOrWhiteSpace(step.Value))
+                            throw new Exception($"Stap {stepIndex}: Value ontbreekt voor press.");
+
+                        await page.PressAsync(step.Selector, step.Value);
+                        log.AppendLine($"[{DateTime.Now}] Pressed {step.Value} on {step.Selector}");
+
+                        await SafeScreenshot(page, runFolder, $"step_{stepIndex}_press.png");
+                        break;
+
                     case "asserttitle":
                         if (string.IsNullOrWhiteSpace(step.Value))
                             throw new Exception($"Stap {stepIndex}: Value ontbreekt voor asserttitle.");
@@ -121,7 +125,7 @@ public class TestExecutionService
                             throw new Exception($"Stap {stepIndex}: Value ontbreekt voor wait.");
 
                         if (!int.TryParse(step.Value, out int waitMs))
-                            throw new Exception($"Stap {stepIndex}: Wait value is ongeldig. Gebruik milliseconds, bijvoorbeeld 2000.");
+                            throw new Exception($"Stap {stepIndex}: Wait value ongeldig.");
 
                         await Task.Delay(waitMs);
                         log.AppendLine($"[{DateTime.Now}] Waited {waitMs} ms");
@@ -131,14 +135,32 @@ public class TestExecutionService
 
                     case "assertelement":
                         if (string.IsNullOrWhiteSpace(step.Selector))
-                            throw new Exception($"Stap {stepIndex}: Selector ontbreekt voor assertelement.");
+                            throw new Exception($"Stap {stepIndex}: Selector ontbreekt.");
 
-                        var element = await page.QuerySelectorAsync(step.Selector);
+                        var locator = page.Locator(step.Selector);
 
-                        if (element == null)
-                            throw new Exception($"Element not found: {step.Selector}");
+                        var state = step.Value?.ToLower() ?? "visible";
 
-                        log.AppendLine($"[{DateTime.Now}] Element assertion passed: {step.Selector}");
+                        if (state == "hidden")
+                        {
+                            await locator.WaitForAsync(new()
+                            {
+                                State = WaitForSelectorState.Hidden,
+                                Timeout = 5000
+                            });
+
+                            log.AppendLine($"[{DateTime.Now}] Element hidden: {step.Selector}");
+                        }
+                        else
+                        {
+                            await locator.WaitForAsync(new()
+                            {
+                                State = WaitForSelectorState.Visible,
+                                Timeout = 5000
+                            });
+
+                            log.AppendLine($"[{DateTime.Now}] Element visible: {step.Selector}");
+                        }
 
                         await SafeScreenshot(page, runFolder, $"step_{stepIndex}_assertelement.png");
                         break;
@@ -151,11 +173,10 @@ public class TestExecutionService
             stopwatch.Stop();
 
             if (browser != null)
-            {
                 await browser.CloseAsync();
-            }
 
-            return ("Pass", log.ToString(), stopwatch.Elapsed.TotalSeconds);
+            // 🔥 RETURN ALLEEN foldernaam (BELANGRIJK)
+            return ("Pass", log.ToString(), stopwatch.Elapsed.TotalSeconds, folderName);
         }
         catch (Exception ex)
         {
@@ -165,16 +186,12 @@ public class TestExecutionService
             Console.WriteLine("ERROR: " + ex.Message);
 
             if (page != null)
-            {
                 await SafeScreenshot(page, runFolder, "error.png");
-            }
 
             if (browser != null)
-            {
                 await browser.CloseAsync();
-            }
 
-            return ("Fail", log.ToString(), stopwatch.Elapsed.TotalSeconds);
+            return ("Fail", log.ToString(), stopwatch.Elapsed.TotalSeconds, folderName);
         }
     }
 

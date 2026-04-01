@@ -86,7 +86,7 @@ public class RunService
         await _context.SaveChangesAsync();
     }
 
-    private async Task<(string status, string log, double time)> ExecuteSingleScript(Script script, string environment)
+    private async Task<(string status, string log, double time,string screenshotPath)> ExecuteSingleScript(Script script, string environment)
     {
         var result = await _execution.RunScript(script.Code);
 
@@ -97,7 +97,8 @@ public class RunService
             Status = result.status,
             Log = result.log,
             ExecutionTime = result.time,
-            ExecutedAt = DateTime.Now
+            ExecutedAt = DateTime.Now,
+            ScreenshotPath = result.screenshotPath
         };
 
         _context.RunResults.Add(runResult);

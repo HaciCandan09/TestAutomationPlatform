@@ -85,6 +85,9 @@ namespace TestAutomationPlatform.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("ScreenshotPath")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("ScriptId")
                         .HasColumnType("int");
 

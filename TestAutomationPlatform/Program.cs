@@ -1,11 +1,13 @@
+using Hangfire;
+using Hangfire.SqlServer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using TestAutomationPlatform.Data;
 using TestAutomationPlatform.Repository;
 using TestAutomationPlatform.Services;
-using Hangfire;
-using Hangfire.SqlServer;
 
 var builder = WebApplication.CreateBuilder(args);
+
 
 // Controllers + Swagger
 builder.Services.AddControllersWithViews();
@@ -38,6 +40,16 @@ app.UseHangfireDashboard();
 // Swagger
 app.UseSwagger();
 app.UseSwaggerUI();
+
+//screenshots ophalen
+app.UseStaticFiles();
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(
+        Path.Combine(Directory.GetCurrentDirectory(), "Screenshots")),
+    RequestPath = "/screenshots"
+});
 
 // Pipeline
 if (!app.Environment.IsDevelopment())

@@ -34,6 +34,7 @@ namespace TestAutomationPlatform.Controllers
                     Environment = rr.Environment,
                     Status = rr.Status,
                     Log = rr.Log,
+                    ScreenshotPath = rr.ScreenshotPath,
                     ExecutionTime = rr.ExecutionTime,
                     ExecutedAt = rr.ExecutedAt
                 }

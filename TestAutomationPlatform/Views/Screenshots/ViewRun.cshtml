@@ -1,0 +1,19 @@
+﻿@model List<string>
+
+@{
+    var path = ViewBag.Path as string;
+    var folderName = System.IO.Path.GetFileName(path);
+}
+
+<h2>Screenshots</h2>
+
+<div class="row">
+    @foreach (var file in Model)
+    {
+        <div class="col-md-3 mb-3">
+            <div class="card">
+                <img src="/screenshots/@folderName/@file" class="card-img-top" />
+            </div>
+        </div>
+    }
+</div>
