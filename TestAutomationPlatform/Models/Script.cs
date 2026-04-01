@@ -1,4 +1,6 @@
-﻿namespace TestAutomationPlatform.Models
+﻿using System.Text.Json.Serialization;
+
+namespace TestAutomationPlatform.Models
 {
     public class Script
     {

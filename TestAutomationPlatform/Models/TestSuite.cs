@@ -1,14 +1,15 @@
-﻿namespace TestAutomationPlatform.Models
+﻿using System.Text.Json.Serialization;
+using TestAutomationPlatform.Models;
+
+public class TestSuite
 {
-    public class TestSuite
-    {
-        public int Id { get; set; }
-        public string Name { get; set; }
-        public string? Description { get; set; }
+    public int Id { get; set; }
+    public string Name { get; set; }
 
-        public int WorkspaceId { get; set; }
-        public Workspace? Workspace { get; set; }
+    public int WorkspaceId { get; set; }
 
-        public List<Script> Scripts { get; set; } = new();
-    }
+    [JsonIgnore]
+    public Workspace? Workspace { get; set; }
+
+    public List<Script> Scripts { get; set; } = new();
 }

@@ -42,27 +42,66 @@ public class RunService
 
         foreach (var script in scripts)
         {
-            var result = await _execution.RunScript(script.Code);
+            var result = await ExecuteSingleScript(script, environment);
 
             if (result.status == "Fail")
             {
                 hasFailures = true;
             }
-
-            var runResult = new RunResult
-            {
-                ScriptId = script.Id,
-                Environment = environment,
-                Status = result.status,
-                Log = result.log,
-                ExecutionTime = result.time,
-                ExecutedAt = DateTime.Now
-            };
-
-            _context.RunResults.Add(runResult);
         }
 
         run.Status = hasFailures ? "Completed with failures" : "Completed";
         await _context.SaveChangesAsync();
+    }
+
+    public async Task ExecuteRunByScriptId(int scriptId, string environment = "Dev")
+    {
+        var allowedEnvironments = new[] { "Dev", "Preprod", "Prod" };
+
+        if (!allowedEnvironments.Contains(environment))
+        {
+            environment = "Dev";
+        }
+
+        var script = await _scriptRepo.GetById(scriptId);
+
+        if (script == null)
+        {
+            throw new Exception($"Script met ID {scriptId} niet gevonden.");
+        }
+
+        var run = new Run
+        {
+            Environment = environment,
+            ScheduledAt = DateTime.Now,
+            Status = "Running"
+        };
+
+        _context.Runs.Add(run);
+        await _context.SaveChangesAsync();
+
+        var result = await ExecuteSingleScript(script, environment);
+
+        run.Status = result.status == "Fail" ? "Completed with failures" : "Completed";
+        await _context.SaveChangesAsync();
+    }
+
+    private async Task<(string status, string log, double time)> ExecuteSingleScript(Script script, string environment)
+    {
+        var result = await _execution.RunScript(script.Code);
+
+        var runResult = new RunResult
+        {
+            ScriptId = script.Id,
+            Environment = environment,
+            Status = result.status,
+            Log = result.log,
+            ExecutionTime = result.time,
+            ExecutedAt = DateTime.Now
+        };
+
+        _context.RunResults.Add(runResult);
+
+        return result;
     }
 }

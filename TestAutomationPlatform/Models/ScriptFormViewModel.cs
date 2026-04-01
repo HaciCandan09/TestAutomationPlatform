@@ -4,6 +4,7 @@ namespace TestAutomationPlatform.Models
 {
     public class ScriptFormViewModel
     {
+        public int Id { get; set; }
         public string Name { get; set; }
         public string Code { get; set; }
 

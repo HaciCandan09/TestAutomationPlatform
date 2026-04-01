@@ -12,18 +12,13 @@ public class TestExecutionService
         _parser = parser;
     }
 
-
-
     public async Task<(string status, string log, double time)> RunScript(string scriptJson)
     {
-        //throw new Exception("TEST - KOM IK HIER?");
-
         Console.WriteLine("RunScript gestart!");
 
         var stopwatch = Stopwatch.StartNew();
         var log = new StringBuilder();
 
-        // ✅ JUIST PAD (altijd goed)
         var basePath = Directory.GetCurrentDirectory();
         var screenshotsPath = Path.Combine(basePath, "Screenshots");
         Directory.CreateDirectory(screenshotsPath);
@@ -31,10 +26,10 @@ public class TestExecutionService
         var runFolder = Path.Combine(screenshotsPath, $"run_{DateTime.Now.Ticks}");
         Directory.CreateDirectory(runFolder);
 
-        // ✅ TEST FILE (altijd zichtbaar)
         File.WriteAllText(Path.Combine(runFolder, "test.txt"), "werkt");
 
         IPage? page = null;
+        IBrowser? browser = null;
 
         try
         {
@@ -43,12 +38,13 @@ public class TestExecutionService
 
             using var playwright = await Playwright.CreateAsync();
 
-            // 🔥 Zet tijdelijk false om te zien of browser opent
-            var browser = await playwright.Chromium.LaunchAsync(new() { Headless = true });
+            browser = await playwright.Chromium.LaunchAsync(new()
+            {
+                Headless = true
+            });
 
             page = await browser.NewPageAsync();
 
-            // 🔥 HARDE TEST (BELANGRIJK)
             await page.GotoAsync("https://google.com");
 
             await page.ScreenshotAsync(new()
@@ -63,11 +59,20 @@ public class TestExecutionService
             foreach (var step in steps)
             {
                 stepIndex++;
+
+                if (step == null || string.IsNullOrWhiteSpace(step.Action))
+                {
+                    throw new Exception($"Stap {stepIndex} is ongeldig: Action ontbreekt.");
+                }
+
                 Console.WriteLine($"Stap: {step.Action}");
 
                 switch (step.Action.ToLower())
                 {
                     case "goto":
+                        if (string.IsNullOrWhiteSpace(step.Value))
+                            throw new Exception($"Stap {stepIndex}: Value ontbreekt voor goto.");
+
                         await page.GotoAsync(step.Value);
                         log.AppendLine($"[{DateTime.Now}] Navigated to {step.Value}");
 
@@ -75,6 +80,9 @@ public class TestExecutionService
                         break;
 
                     case "click":
+                        if (string.IsNullOrWhiteSpace(step.Selector))
+                            throw new Exception($"Stap {stepIndex}: Selector ontbreekt voor click.");
+
                         await page.ClickAsync(step.Selector);
                         log.AppendLine($"[{DateTime.Now}] Clicked {step.Selector}");
 
@@ -82,6 +90,12 @@ public class TestExecutionService
                         break;
 
                     case "fill":
+                        if (string.IsNullOrWhiteSpace(step.Selector))
+                            throw new Exception($"Stap {stepIndex}: Selector ontbreekt voor fill.");
+
+                        if (step.Value == null)
+                            throw new Exception($"Stap {stepIndex}: Value ontbreekt voor fill.");
+
                         await page.FillAsync(step.Selector, step.Value);
                         log.AppendLine($"[{DateTime.Now}] Filled {step.Selector}");
 
@@ -89,19 +103,58 @@ public class TestExecutionService
                         break;
 
                     case "asserttitle":
+                        if (string.IsNullOrWhiteSpace(step.Value))
+                            throw new Exception($"Stap {stepIndex}: Value ontbreekt voor asserttitle.");
+
                         var title = await page.TitleAsync();
 
                         if (!title.Contains(step.Value))
                             throw new Exception($"Title mismatch: {title}");
 
-                        log.AppendLine($"[{DateTime.Now}] Title assertion passed");
+                        log.AppendLine($"[{DateTime.Now}] Title assertion passed: {step.Value}");
 
-                        await SafeScreenshot(page, runFolder, $"step_{stepIndex}_assert.png");
+                        await SafeScreenshot(page, runFolder, $"step_{stepIndex}_asserttitle.png");
                         break;
+
+                    case "wait":
+                        if (string.IsNullOrWhiteSpace(step.Value))
+                            throw new Exception($"Stap {stepIndex}: Value ontbreekt voor wait.");
+
+                        if (!int.TryParse(step.Value, out int waitMs))
+                            throw new Exception($"Stap {stepIndex}: Wait value is ongeldig. Gebruik milliseconds, bijvoorbeeld 2000.");
+
+                        await Task.Delay(waitMs);
+                        log.AppendLine($"[{DateTime.Now}] Waited {waitMs} ms");
+
+                        await SafeScreenshot(page, runFolder, $"step_{stepIndex}_wait.png");
+                        break;
+
+                    case "assertelement":
+                        if (string.IsNullOrWhiteSpace(step.Selector))
+                            throw new Exception($"Stap {stepIndex}: Selector ontbreekt voor assertelement.");
+
+                        var element = await page.QuerySelectorAsync(step.Selector);
+
+                        if (element == null)
+                            throw new Exception($"Element not found: {step.Selector}");
+
+                        log.AppendLine($"[{DateTime.Now}] Element assertion passed: {step.Selector}");
+
+                        await SafeScreenshot(page, runFolder, $"step_{stepIndex}_assertelement.png");
+                        break;
+
+                    default:
+                        throw new Exception($"Onbekende actie: {step.Action}");
                 }
             }
 
             stopwatch.Stop();
+
+            if (browser != null)
+            {
+                await browser.CloseAsync();
+            }
+
             return ("Pass", log.ToString(), stopwatch.Elapsed.TotalSeconds);
         }
         catch (Exception ex)
@@ -116,11 +169,15 @@ public class TestExecutionService
                 await SafeScreenshot(page, runFolder, "error.png");
             }
 
+            if (browser != null)
+            {
+                await browser.CloseAsync();
+            }
+
             return ("Fail", log.ToString(), stopwatch.Elapsed.TotalSeconds);
         }
     }
 
-    // 🔥 VEILIGE SCREENSHOT METHOD (enterprise style)
     private async Task SafeScreenshot(IPage page, string folder, string fileName)
     {
         try
@@ -139,7 +196,4 @@ public class TestExecutionService
             Console.WriteLine("Screenshot error: " + ex.Message);
         }
     }
-
-
-
 }
