@@ -45,7 +45,6 @@
         </form>
     </div>
 
-
     <div class="row mb-4">
         <div class="col-md-3 mb-3">
             <div class="card shadow-sm border-0">
@@ -160,7 +159,6 @@
             {
                 <div class="table-responsive">
                     <table class="table table-hover align-middle" id="resultsTable">
-                        <!--screenshot start-->
                         <thead class="table-light">
                             <tr>
                                 <th>Script</th>
@@ -169,141 +167,13 @@
                                 <th>Execution Time</th>
                                 <th>Executed At</th>
                                 <th>Log</th>
-                                <th>Screenshots</th> 
+                                <th>Screenshots</th>
                             </tr>
                         </thead>
 
-                        <tbody>
-                            @foreach (var item in Model)
-                            {
-                                var rowClass = item.Status == "Pass" ? "table-success" : "table-danger";
-
-                                <tr class="result-row @rowClass"
-                                    data-status="@item.Status"
-                                    data-script="@item.ScriptName.ToLower()"
-                                    data-environment="@item.Environment"
-                                    data-date="@item.ExecutedAt.Ticks">
-
-                                    <td>
-                                        <div class="fw-semibold">@item.ScriptName</div>
-                                        <small class="text-muted">Script ID: @item.ScriptId</small>
-                                    </td>
-
-                                    <td>
-                                        <span class="badge bg-secondary">@item.Environment</span>
-                                    </td>
-
-                                    <td>
-                                        @if (item.Status == "Pass")
-                                        {
-                                            <span class="badge bg-success">Pass</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge bg-danger">Fail</span>
-                                        }
-                                    </td>
-
-                                    <td>@Math.Round(item.ExecutionTime, 2) s</td>
-                                    <td>@item.ExecutedAt.ToString("dd-MM-yyyy HH:mm:ss")</td>
-
-                                    <td style="min-width:220px;">
-                                        <button class="btn btn-sm btn-outline-dark mb-2" type="button" onclick="toggleLog(@item.Id)">
-                                            Toon / Verberg log
-                                        </button>
-
-                                        <div id="log-@item.Id" style="display:none;">
-                                            <pre class="bg-light p-2 rounded border mb-0" style="white-space: pre-wrap; font-size: 13px;">
-                                                @item.Log
-                                            </pre>
-                                        </div>
-                                    </td>
-
-                                    <!--SCREENSHOT BUTTON -->
-                                    <td>
-                                        @if (!string.IsNullOrEmpty(item.ScreenshotPath))
-                                        {
-                                            <button type="button"
-                                                    class="btn btn-sm btn-info"
-                                                    onclick="openScreenshotModal('@item.ScreenshotPath')">
-                                                📸 Bekijk
-                                            </button>
-                                        }
-                                        else
-                                        {
-                                            <span class="text-muted">-</span>
-                                        }
-                                    </td>
-
-                                </tr>
-                            }
+                        <tbody id="resultsBody">
+                            @await Html.PartialAsync("PartialDataRefresh", Model)
                         </tbody>
-                        <tbody>
-                            @foreach (var item in Model)
-                            {
-                                var rowClass = item.Status == "Pass" ? "table-success" : "table-danger";
-
-                                <tr class="result-row @rowClass"
-                                    data-status="@item.Status"
-                                    data-script="@item.ScriptName.ToLower()"
-                                    data-environment="@item.Environment"
-                                    data-date="@item.ExecutedAt.Ticks">
-
-                                    <td>
-                                        <div class="fw-semibold">@item.ScriptName</div>
-                                        <small class="text-muted">Script ID: @item.ScriptId</small>
-                                    </td>
-
-                                    <td>
-                                        <span class="badge bg-secondary">@item.Environment</span>
-                                    </td>
-
-                                    <td>
-                                        @if (item.Status == "Pass")
-                                        {
-                                            <span class="badge bg-success">Pass</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge bg-danger">Fail</span>
-                                        }
-                                    </td>
-
-                                    <td>@Math.Round(item.ExecutionTime, 2) s</td>
-                                    <td>@item.ExecutedAt.ToString("dd-MM-yyyy HH:mm:ss")</td>
-
-                                    <td style="min-width:220px;">
-                                        <button class="btn btn-sm btn-outline-dark mb-2" type="button" onclick="toggleLog(@item.Id)">
-                                            Toon / Verberg log
-                                        </button>
-
-                                        <div id="log-@item.Id" style="display:none;">
-                                            <pre class="bg-light p-2 rounded border mb-0" style="white-space: pre-wrap; font-size: 13px;">
-                                                @item.Log
-                                            </pre>
-                                        </div>
-                                    </td>
-
-                                    <!--CREENSHOT BUTTON -->
-                                    <td>
-                                        @if (!string.IsNullOrEmpty(item.ScreenshotPath))
-                                        {
-                                            <button type="button"
-                                                    class="btn btn-sm btn-info"
-                                                    onclick="openScreenshotModal('@item.ScreenshotPath')">
-                                                📸 Bekijk
-                                            </button>
-                                        }
-                                        else
-                                        {
-                                            <span class="text-muted">-</span>
-                                        }
-                                    </td>
-
-                                </tr>
-                            }
-                        </tbody>
-                        <!-- screenshot end-->
                     </table>
                 </div>
 
@@ -314,7 +184,7 @@
         </div>
     </div>
 </div>
-<!--screenshot popup code-->
+
 <div class="modal fade" id="screenshotModal" tabindex="-1" aria-labelledby="screenshotModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
@@ -332,19 +202,21 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
-
-    @* Fullscreen mode *@
-
     function openFullscreen(src) {
     const overlay = document.getElementById("fullscreenOverlay");
     const img = document.getElementById("fullscreenImage");
+
+    if (!overlay || !img) return;
 
     img.src = src;
     overlay.style.display = "flex";
     }
 
     function closeFullscreen() {
-    document.getElementById("fullscreenOverlay").style.display = "none";
+    const overlay = document.getElementById("fullscreenOverlay");
+    if (overlay) {
+    overlay.style.display = "none";
+    }
     }
 
     document.addEventListener("keydown", function (e) {
@@ -352,8 +224,6 @@
     closeFullscreen();
     }
     });
-
-    @* <!--screenshotpopup javascriptcode--> *@
 
     async function openScreenshotModal(path) {
     const modalBody = document.getElementById("screenshotModalBody");
@@ -430,6 +300,8 @@
 
     function toggleLog(id) {
     const logElement = document.getElementById("log-" + id);
+    if (!logElement) return;
+
     if (logElement.style.display === "none" || logElement.style.display === "") {
     logElement.style.display = "block";
     } else {
@@ -457,7 +329,7 @@
     }
 
     function sortTable() {
-    const tbody = document.querySelector("#resultsTable tbody");
+    const tbody = document.getElementById("resultsBody");
     const rows = Array.from(document.querySelectorAll(".result-row"));
     const sortValue = document.getElementById("sortDate").value;
 
@@ -484,7 +356,17 @@
     document.getElementById("environmentFilter").addEventListener("change", filterTable);
     document.getElementById("sortDate").addEventListener("change", sortTable);
 
-    setInterval(() => {
-    location.reload();
+    setInterval(async () => {
+    try {
+    const response = await fetch('/Dashboard/GetResultsPartial');
+    const html = await response.text();
+
+    document.getElementById("resultsBody").innerHTML = html;
+
+    filterTable();
+    sortTable();
+    } catch (e) {
+    console.error("Refresh error", e);
+    }
     }, 10000);
 </script>
