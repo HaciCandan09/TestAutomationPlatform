@@ -1,0 +1,61 @@
+﻿@model List<TestAutomationPlatform.Models.DashboardViewModel>
+
+@foreach (var item in Model)
+{
+    var rowClass = item.Status == "Pass" ? "table-success" : "table-danger";
+
+    <tr class="result-row @rowClass"
+        data-status="@item.Status"
+        data-script="@item.ScriptName.ToLower()"
+        data-environment="@item.Environment"
+        data-date="@item.ExecutedAt.Ticks">
+
+        <td>
+            <div class="fw-semibold">@item.ScriptName</div>
+            <small class="text-muted">Script ID: @item.ScriptId</small>
+        </td>
+
+        <td>
+            <span class="badge bg-secondary">@item.Environment</span>
+        </td>
+
+        <td>
+            @if (item.Status == "Pass")
+            {
+                <span class="badge bg-success">Pass</span>
+            }
+            else
+            {
+                <span class="badge bg-danger">Fail</span>
+            }
+        </td>
+
+        <td>@Math.Round(item.ExecutionTime, 2) s</td>
+        <td>@item.ExecutedAt.ToString("dd-MM-yyyy HH:mm:ss")</td>
+
+        <td style="min-width:220px;">
+            <button class="btn btn-sm btn-outline-dark mb-2" type="button" onclick="toggleLog(@item.Id)">
+                Toon / Verberg log
+            </button>
+
+            <div id="log-@item.Id" style="display:none;">
+                <pre class="bg-light p-2 rounded border mb-0" style="white-space: pre-wrap; font-size: 13px;">@item.Log</pre>
+            </div>
+        </td>
+
+        <td>
+            @if (!string.IsNullOrEmpty(item.ScreenshotPath))
+            {
+                <button type="button"
+                        class="btn btn-sm btn-info"
+                        onclick="openScreenshotModal('@item.ScreenshotPath')">
+                    📸 Bekijk
+                </button>
+            }
+            else
+            {
+                <span class="text-muted">-</span>
+            }
+        </td>
+    </tr>
+}

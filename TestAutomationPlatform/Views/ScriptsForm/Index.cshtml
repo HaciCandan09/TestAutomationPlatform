@@ -71,7 +71,7 @@
 
                                     <td class="d-flex gap-2">
 
-                                        <!-- RUN -->
+                                        <!-- RUN knop -->
                                         <form asp-action="Run" method="post">
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="id" value="@script.Id" />
@@ -81,14 +81,14 @@
                                             </button>
                                         </form>
 
-                                        <!-- EDIT -->
+                                        <!-- EDIT knop -->
                                         <a asp-action="Edit"
                                                asp-route-id="@script.Id"
                                                class="btn btn-warning btn-sm">
                                             <i class="bi bi-pencil-fill"></i>
                                         </a>
 
-                                        <!-- DELETE -->
+                                        <!-- DELETE knop -->
                                         <form asp-action="Delete"
                                               method="post"
                                               onsubmit="return confirm('Weet je zeker dat je dit script wilt verwijderen?');">

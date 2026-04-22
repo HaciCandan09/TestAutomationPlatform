@@ -44,5 +44,31 @@ namespace TestAutomationPlatform.Controllers
 
             return View(results);
         }
+
+        [HttpGet]
+        public async Task<IActionResult> GetResultsPartial()
+        {
+            var results = await (
+                from rr in _context.RunResults
+                join s in _context.Scripts on rr.ScriptId equals s.Id
+                orderby rr.ExecutedAt descending
+                select new DashboardViewModel
+                {
+                    Id = rr.Id,
+                    ScriptId = rr.ScriptId,
+                    ScriptName = s.Name, // 
+                    Environment = rr.Environment,
+                    Status = rr.Status,
+                    Log = rr.Log,
+                    ExecutionTime = rr.ExecutionTime,
+                    ExecutedAt = rr.ExecutedAt,
+                    ScreenshotPath = rr.ScreenshotPath
+                }
+            )
+            .Take(50)
+            .ToListAsync();
+
+            return PartialView("PartialDataRefresh", results);
+        }
     }
 }
