@@ -1,4 +1,4 @@
-﻿using Microsoft.Playwright;
+using Microsoft.Playwright;
 using System.Diagnostics;
 using System.Text;
 using TestAutomationPlatform.Services;
@@ -6,15 +6,17 @@ using TestAutomationPlatform.Services;
 public class TestExecutionService
 {
     private readonly ScriptParser _parser;
+    private readonly ILogger<TestExecutionService> _logger;
 
-    public TestExecutionService(ScriptParser parser)
+    public TestExecutionService(ScriptParser parser, ILogger<TestExecutionService> logger)
     {
         _parser = parser;
+        _logger = logger;
     }
 
     public async Task<(string status, string log, double time, string screenshotPath)> RunScript(string scriptJson)
     {
-        Console.WriteLine("RunScript gestart!");
+        _logger.LogInformation("RunScript started.");
 
         var stopwatch = Stopwatch.StartNew();
         var log = new StringBuilder();
@@ -23,8 +25,7 @@ public class TestExecutionService
         var screenshotsPath = Path.Combine(basePath, "Screenshots");
         Directory.CreateDirectory(screenshotsPath);
 
-        // 🔥 BELANGRIJK: alleen foldernaam opslaan
-        var folderName = $"run_{DateTime.Now.Ticks}";
+        var folderName = $"run_{DateTime.UtcNow.Ticks}";
         var runFolder = Path.Combine(screenshotsPath, folderName);
         Directory.CreateDirectory(runFolder);
 
@@ -34,7 +35,7 @@ public class TestExecutionService
         try
         {
             var steps = _parser.Parse(scriptJson);
-            Console.WriteLine($"Aantal steps: {steps.Count}");
+            _logger.LogInformation("Parsed {StepCount} test steps.", steps.Count);
 
             using var playwright = await Playwright.CreateAsync();
 
@@ -56,7 +57,7 @@ public class TestExecutionService
                     throw new Exception($"Stap {stepIndex} is ongeldig: Action ontbreekt.");
                 }
 
-                Console.WriteLine($"Stap: {step.Action}");
+                _logger.LogInformation("Executing step action {Action}.", step.Action);
 
                 switch (step.Action.ToLower())
                 {
@@ -65,7 +66,7 @@ public class TestExecutionService
                             throw new Exception($"Stap {stepIndex}: Value ontbreekt voor goto.");
 
                         await page.GotoAsync(step.Value);
-                        log.AppendLine($"[{DateTime.Now}] Navigated to {step.Value}");
+                        log.AppendLine($"[{DateTime.UtcNow}] Navigated to {step.Value}");
 
                         await SafeScreenshot(page, runFolder, $"step_{stepIndex}_goto.png");
                         break;
@@ -75,7 +76,7 @@ public class TestExecutionService
                             throw new Exception($"Stap {stepIndex}: Selector ontbreekt voor click.");
 
                         await page.ClickAsync(step.Selector);
-                        log.AppendLine($"[{DateTime.Now}] Clicked {step.Selector}");
+                        log.AppendLine($"[{DateTime.UtcNow}] Clicked {step.Selector}");
 
                         await SafeScreenshot(page, runFolder, $"step_{stepIndex}_click.png");
                         break;
@@ -88,7 +89,7 @@ public class TestExecutionService
                             throw new Exception($"Stap {stepIndex}: Value ontbreekt voor fill.");
 
                         await page.FillAsync(step.Selector, step.Value);
-                        log.AppendLine($"[{DateTime.Now}] Filled {step.Selector}");
+                        log.AppendLine($"[{DateTime.UtcNow}] Filled {step.Selector}");
 
                         await SafeScreenshot(page, runFolder, $"step_{stepIndex}_fill.png");
                         break;
@@ -101,7 +102,7 @@ public class TestExecutionService
                             throw new Exception($"Stap {stepIndex}: Value ontbreekt voor press.");
 
                         await page.PressAsync(step.Selector, step.Value);
-                        log.AppendLine($"[{DateTime.Now}] Pressed {step.Value} on {step.Selector}");
+                        log.AppendLine($"[{DateTime.UtcNow}] Pressed {step.Value} on {step.Selector}");
 
                         await SafeScreenshot(page, runFolder, $"step_{stepIndex}_press.png");
                         break;
@@ -115,7 +116,7 @@ public class TestExecutionService
                         if (!title.Contains(step.Value))
                             throw new Exception($"Title mismatch: {title}");
 
-                        log.AppendLine($"[{DateTime.Now}] Title assertion passed: {step.Value}");
+                        log.AppendLine($"[{DateTime.UtcNow}] Title assertion passed: {step.Value}");
 
                         await SafeScreenshot(page, runFolder, $"step_{stepIndex}_asserttitle.png");
                         break;
@@ -128,7 +129,7 @@ public class TestExecutionService
                             throw new Exception($"Stap {stepIndex}: Wait value ongeldig.");
 
                         await Task.Delay(waitMs);
-                        log.AppendLine($"[{DateTime.Now}] Waited {waitMs} ms");
+                        log.AppendLine($"[{DateTime.UtcNow}] Waited {waitMs} ms");
 
                         await SafeScreenshot(page, runFolder, $"step_{stepIndex}_wait.png");
                         break;
@@ -149,7 +150,7 @@ public class TestExecutionService
                                 Timeout = 5000
                             });
 
-                            log.AppendLine($"[{DateTime.Now}] Element hidden: {step.Selector}");
+                            log.AppendLine($"[{DateTime.UtcNow}] Element hidden: {step.Selector}");
                         }
                         else
                         {
@@ -159,7 +160,7 @@ public class TestExecutionService
                                 Timeout = 5000
                             });
 
-                            log.AppendLine($"[{DateTime.Now}] Element visible: {step.Selector}");
+                            log.AppendLine($"[{DateTime.UtcNow}] Element visible: {step.Selector}");
                         }
 
                         await SafeScreenshot(page, runFolder, $"step_{stepIndex}_assertelement.png");
@@ -175,15 +176,14 @@ public class TestExecutionService
             if (browser != null)
                 await browser.CloseAsync();
 
-            // 🔥 RETURN ALLEEN foldernaam (BELANGRIJK)
             return ("Pass", log.ToString(), stopwatch.Elapsed.TotalSeconds, folderName);
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
 
-            log.AppendLine($"[{DateTime.Now}] ERROR: {ex.Message}");
-            Console.WriteLine("ERROR: " + ex.Message);
+            log.AppendLine($"[{DateTime.UtcNow}] ERROR: {ex.Message}");
+            _logger.LogError(ex, "Script execution failed.");
 
             if (page != null)
                 await SafeScreenshot(page, runFolder, "error.png");
@@ -206,11 +206,11 @@ public class TestExecutionService
                 Path = fullPath
             });
 
-            Console.WriteLine($"Screenshot opgeslagen: {fullPath}");
+            _logger.LogInformation("Screenshot saved: {Path}", fullPath);
         }
         catch (Exception ex)
         {
-            Console.WriteLine("Screenshot error: " + ex.Message);
+            _logger.LogWarning(ex, "Screenshot failed.");
         }
     }
 }
