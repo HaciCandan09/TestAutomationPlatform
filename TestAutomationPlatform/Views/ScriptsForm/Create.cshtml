@@ -48,23 +48,7 @@
             </div>
         </div>
 
-        <div class="mt-3">
-            <label asp-for="Code" class="form-label">Script JSON</label>
-            <textarea asp-for="Code" class="form-control code-editor" rows="16" placeholder="Plak hier je JSON-stappen"></textarea>
-            <span asp-validation-for="Code" class="text-danger"></span>
-        </div>
-
-        <details class="script-help mt-3">
-            <summary>Ondersteunde acties en voorbeeld</summary>
-            <pre class="result-log mt-2 mb-0">[
-  { "action": "goto", "value": "https://example.com", "timeout": 10000 },
-  { "action": "waitforselector", "selector": "h1" },
-  { "action": "asserttitle", "value": "Example" },
-  { "action": "asserttext", "selector": "h1", "value": "Example Domain" },
-  { "action": "click", "selector": "a" },
-  { "action": "screenshot" }
-]</pre>
-        </details>
+        @await Html.PartialAsync("_StepBuilder", Model)
 
         <div class="d-flex gap-2 mt-4">
             <button type="submit" class="btn btn-success">
