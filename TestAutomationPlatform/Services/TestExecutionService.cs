@@ -1,10 +1,12 @@
 using Microsoft.Playwright;
 using System.Diagnostics;
 using System.Text;
+using TestAutomationPlatform.DTO;
 using TestAutomationPlatform.Services;
 
 public class TestExecutionService
 {
+    private const int DefaultTimeoutMs = 5000;
     private readonly ScriptParser _parser;
     private readonly ILogger<TestExecutionService> _logger;
 
@@ -34,6 +36,12 @@ public class TestExecutionService
 
         try
         {
+            var validationErrors = _parser.Validate(scriptJson);
+            if (validationErrors.Count > 0)
+            {
+                throw new Exception(string.Join(" ", validationErrors));
+            }
+
             var steps = _parser.Parse(scriptJson);
             _logger.LogInformation("Parsed {StepCount} test steps.", steps.Count);
 
@@ -46,135 +54,15 @@ public class TestExecutionService
 
             page = await browser.NewPageAsync();
 
-            int stepIndex = 0;
-
-            foreach (var step in steps)
+            for (var stepIndex = 0; stepIndex < steps.Count; stepIndex++)
             {
-                stepIndex++;
-
-                if (step == null || string.IsNullOrWhiteSpace(step.Action))
-                {
-                    throw new Exception($"Stap {stepIndex} is ongeldig: Action ontbreekt.");
-                }
-
-                _logger.LogInformation("Executing step action {Action}.", step.Action);
-
-                switch (step.Action.ToLower())
-                {
-                    case "goto":
-                        if (string.IsNullOrWhiteSpace(step.Value))
-                            throw new Exception($"Stap {stepIndex}: Value ontbreekt voor goto.");
-
-                        await page.GotoAsync(step.Value);
-                        log.AppendLine($"[{DateTime.UtcNow}] Navigated to {step.Value}");
-
-                        await SafeScreenshot(page, runFolder, $"step_{stepIndex}_goto.png");
-                        break;
-
-                    case "click":
-                        if (string.IsNullOrWhiteSpace(step.Selector))
-                            throw new Exception($"Stap {stepIndex}: Selector ontbreekt voor click.");
-
-                        await page.ClickAsync(step.Selector);
-                        log.AppendLine($"[{DateTime.UtcNow}] Clicked {step.Selector}");
-
-                        await SafeScreenshot(page, runFolder, $"step_{stepIndex}_click.png");
-                        break;
-
-                    case "fill":
-                        if (string.IsNullOrWhiteSpace(step.Selector))
-                            throw new Exception($"Stap {stepIndex}: Selector ontbreekt voor fill.");
-
-                        if (step.Value == null)
-                            throw new Exception($"Stap {stepIndex}: Value ontbreekt voor fill.");
-
-                        await page.FillAsync(step.Selector, step.Value);
-                        log.AppendLine($"[{DateTime.UtcNow}] Filled {step.Selector}");
-
-                        await SafeScreenshot(page, runFolder, $"step_{stepIndex}_fill.png");
-                        break;
-
-                    case "press":
-                        if (string.IsNullOrWhiteSpace(step.Selector))
-                            throw new Exception($"Stap {stepIndex}: Selector ontbreekt voor press.");
-
-                        if (string.IsNullOrWhiteSpace(step.Value))
-                            throw new Exception($"Stap {stepIndex}: Value ontbreekt voor press.");
-
-                        await page.PressAsync(step.Selector, step.Value);
-                        log.AppendLine($"[{DateTime.UtcNow}] Pressed {step.Value} on {step.Selector}");
-
-                        await SafeScreenshot(page, runFolder, $"step_{stepIndex}_press.png");
-                        break;
-
-                    case "asserttitle":
-                        if (string.IsNullOrWhiteSpace(step.Value))
-                            throw new Exception($"Stap {stepIndex}: Value ontbreekt voor asserttitle.");
-
-                        var title = await page.TitleAsync();
-
-                        if (!title.Contains(step.Value))
-                            throw new Exception($"Title mismatch: {title}");
-
-                        log.AppendLine($"[{DateTime.UtcNow}] Title assertion passed: {step.Value}");
-
-                        await SafeScreenshot(page, runFolder, $"step_{stepIndex}_asserttitle.png");
-                        break;
-
-                    case "wait":
-                        if (string.IsNullOrWhiteSpace(step.Value))
-                            throw new Exception($"Stap {stepIndex}: Value ontbreekt voor wait.");
-
-                        if (!int.TryParse(step.Value, out int waitMs))
-                            throw new Exception($"Stap {stepIndex}: Wait value ongeldig.");
-
-                        await Task.Delay(waitMs);
-                        log.AppendLine($"[{DateTime.UtcNow}] Waited {waitMs} ms");
-
-                        await SafeScreenshot(page, runFolder, $"step_{stepIndex}_wait.png");
-                        break;
-
-                    case "assertelement":
-                        if (string.IsNullOrWhiteSpace(step.Selector))
-                            throw new Exception($"Stap {stepIndex}: Selector ontbreekt.");
-
-                        var locator = page.Locator(step.Selector);
-
-                        var state = step.Value?.ToLower() ?? "visible";
-
-                        if (state == "hidden")
-                        {
-                            await locator.WaitForAsync(new()
-                            {
-                                State = WaitForSelectorState.Hidden,
-                                Timeout = 5000
-                            });
-
-                            log.AppendLine($"[{DateTime.UtcNow}] Element hidden: {step.Selector}");
-                        }
-                        else
-                        {
-                            await locator.WaitForAsync(new()
-                            {
-                                State = WaitForSelectorState.Visible,
-                                Timeout = 5000
-                            });
-
-                            log.AppendLine($"[{DateTime.UtcNow}] Element visible: {step.Selector}");
-                        }
-
-                        await SafeScreenshot(page, runFolder, $"step_{stepIndex}_assertelement.png");
-                        break;
-
-                    default:
-                        throw new Exception($"Onbekende actie: {step.Action}");
-                }
+                var stepNumber = stepIndex + 1;
+                var step = steps[stepIndex];
+                await ExecuteStep(page, step, stepNumber, runFolder, log);
             }
 
             stopwatch.Stop();
-
-            if (browser != null)
-                await browser.CloseAsync();
+            await browser.CloseAsync();
 
             return ("Pass", log.ToString(), stopwatch.Elapsed.TotalSeconds, folderName);
         }
@@ -192,6 +80,117 @@ public class TestExecutionService
                 await browser.CloseAsync();
 
             return ("Fail", log.ToString(), stopwatch.Elapsed.TotalSeconds, folderName);
+        }
+    }
+
+    private async Task ExecuteStep(IPage page, TestStep step, int stepNumber, string runFolder, StringBuilder log)
+    {
+        var action = step.Action?.ToLowerInvariant() ?? string.Empty;
+        var timeout = step.Timeout ?? DefaultTimeoutMs;
+
+        _logger.LogInformation("Executing step {StepNumber}: {Action}.", stepNumber, action);
+
+        switch (action)
+        {
+            case "goto":
+                await page.GotoAsync(step.Value!, new() { Timeout = timeout });
+                log.AppendLine($"[{DateTime.UtcNow}] Navigated to {step.Value}");
+                await SafeScreenshot(page, runFolder, $"step_{stepNumber}_goto.png");
+                break;
+
+            case "click":
+                await page.ClickAsync(step.Selector!, new() { Timeout = timeout });
+                log.AppendLine($"[{DateTime.UtcNow}] Clicked {step.Selector}");
+                await SafeScreenshot(page, runFolder, $"step_{stepNumber}_click.png");
+                break;
+
+            case "fill":
+                await page.FillAsync(step.Selector!, step.Value!, new() { Timeout = timeout });
+                log.AppendLine($"[{DateTime.UtcNow}] Filled {step.Selector}");
+                await SafeScreenshot(page, runFolder, $"step_{stepNumber}_fill.png");
+                break;
+
+            case "press":
+                await page.PressAsync(step.Selector!, step.Value!, new() { Timeout = timeout });
+                log.AppendLine($"[{DateTime.UtcNow}] Pressed {step.Value} on {step.Selector}");
+                await SafeScreenshot(page, runFolder, $"step_{stepNumber}_press.png");
+                break;
+
+            case "wait":
+                var waitMs = int.Parse(step.Value!);
+                await Task.Delay(waitMs);
+                log.AppendLine($"[{DateTime.UtcNow}] Waited {waitMs} ms");
+                await SafeScreenshot(page, runFolder, $"step_{stepNumber}_wait.png");
+                break;
+
+            case "waitforselector":
+                await page.Locator(step.Selector!).WaitForAsync(new() { Timeout = timeout });
+                log.AppendLine($"[{DateTime.UtcNow}] Selector appeared: {step.Selector}");
+                await SafeScreenshot(page, runFolder, $"step_{stepNumber}_waitforselector.png");
+                break;
+
+            case "asserttitle":
+                var title = await page.TitleAsync();
+                if (!title.Contains(step.Value!, StringComparison.OrdinalIgnoreCase))
+                    throw new Exception($"Title mismatch. Expected '{step.Value}', actual '{title}'.");
+
+                log.AppendLine($"[{DateTime.UtcNow}] Title assertion passed: {step.Value}");
+                await SafeScreenshot(page, runFolder, $"step_{stepNumber}_asserttitle.png");
+                break;
+
+            case "asserturl":
+                var url = page.Url;
+                if (!url.Contains(step.Value!, StringComparison.OrdinalIgnoreCase))
+                    throw new Exception($"URL mismatch. Expected '{step.Value}', actual '{url}'.");
+
+                log.AppendLine($"[{DateTime.UtcNow}] URL assertion passed: {step.Value}");
+                await SafeScreenshot(page, runFolder, $"step_{stepNumber}_asserturl.png");
+                break;
+
+            case "assertelement":
+                var state = step.Value?.ToLowerInvariant() == "hidden"
+                    ? WaitForSelectorState.Hidden
+                    : WaitForSelectorState.Visible;
+
+                await page.Locator(step.Selector!).WaitForAsync(new() { State = state, Timeout = timeout });
+                log.AppendLine($"[{DateTime.UtcNow}] Element state assertion passed: {step.Selector} is {state}");
+                await SafeScreenshot(page, runFolder, $"step_{stepNumber}_assertelement.png");
+                break;
+
+            case "asserttext":
+                var text = await page.Locator(step.Selector!).InnerTextAsync(new() { Timeout = timeout });
+                if (!text.Contains(step.Value!, StringComparison.OrdinalIgnoreCase))
+                    throw new Exception($"Text mismatch on {step.Selector}. Expected '{step.Value}', actual '{text}'.");
+
+                log.AppendLine($"[{DateTime.UtcNow}] Text assertion passed on {step.Selector}: {step.Value}");
+                await SafeScreenshot(page, runFolder, $"step_{stepNumber}_asserttext.png");
+                break;
+
+            case "select":
+                await page.SelectOptionAsync(step.Selector!, step.Value, new() { Timeout = timeout });
+                log.AppendLine($"[{DateTime.UtcNow}] Selected {step.Value} in {step.Selector}");
+                await SafeScreenshot(page, runFolder, $"step_{stepNumber}_select.png");
+                break;
+
+            case "check":
+                await page.CheckAsync(step.Selector!, new() { Timeout = timeout });
+                log.AppendLine($"[{DateTime.UtcNow}] Checked {step.Selector}");
+                await SafeScreenshot(page, runFolder, $"step_{stepNumber}_check.png");
+                break;
+
+            case "uncheck":
+                await page.UncheckAsync(step.Selector!, new() { Timeout = timeout });
+                log.AppendLine($"[{DateTime.UtcNow}] Unchecked {step.Selector}");
+                await SafeScreenshot(page, runFolder, $"step_{stepNumber}_uncheck.png");
+                break;
+
+            case "screenshot":
+                await SafeScreenshot(page, runFolder, $"step_{stepNumber}_screenshot.png");
+                log.AppendLine($"[{DateTime.UtcNow}] Screenshot captured");
+                break;
+
+            default:
+                throw new Exception($"Onbekende actie: {step.Action}");
         }
     }
 
