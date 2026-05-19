@@ -1,56 +1,66 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 
 namespace TestAutomationPlatform.Controllers
 {
     public class ScreenshotsController : Controller
     {
-        public IActionResult ViewRun(string path)
+        private readonly IWebHostEnvironment _environment;
+
+        public ScreenshotsController(IWebHostEnvironment environment)
         {
-            if (string.IsNullOrWhiteSpace(path))
-            {
-                return NotFound("Geen screenshotpad opgegeven.");
-            }
-
-            var screenshotsRoot = Path.Combine(Directory.GetCurrentDirectory(), "Screenshots");
-            var fullPath = Path.Combine(screenshotsRoot, path);
-
-            if (!Directory.Exists(fullPath))
-            {
-                return NotFound($"Screenshot map niet gevonden: {fullPath}");
-            }
-
-            var files = Directory.GetFiles(fullPath)
-                .Select(Path.GetFileName)
-                .Where(f => f != null)
-                .ToList()!;
-
-            ViewBag.Path = path;
-            return View(files);
+            _environment = environment;
         }
 
-        // 🔥 NIEUW: voor modal content
-        public IActionResult RunImages(string path)
+        public IActionResult ViewRun(string path)
         {
-            if (string.IsNullOrWhiteSpace(path))
+            if (!TryGetRunFolder(path, out var fullPath))
             {
-                return Content("<p>Geen screenshot pad opgegeven.</p>", "text/html");
+                return NotFound("Screenshot map niet gevonden.");
             }
-
-            var screenshotsRoot = Path.Combine(Directory.GetCurrentDirectory(), "Screenshots");
-            var fullPath = Path.Combine(screenshotsRoot, path);
-
-            if (!Directory.Exists(fullPath))
-            {
-                return Content("<p>Screenshot map niet gevonden.</p>", "text/html");
-            }
-
-            var files = Directory.GetFiles(fullPath)
-                .Select(Path.GetFileName)
-                .Where(f => f != null)
-                .ToList()!;
 
             ViewBag.Path = path;
-            return PartialView("_RunImagesPopup", files);
+            return View(GetImageFiles(fullPath));
+        }
+
+        public IActionResult RunImages(string path)
+        {
+            if (!TryGetRunFolder(path, out var fullPath))
+            {
+                return PartialView("_RunImagesPopup", new List<string>());
+            }
+
+            ViewBag.Path = path;
+            return PartialView("_RunImagesPopup", GetImageFiles(fullPath));
+        }
+
+        private bool TryGetRunFolder(string? path, out string fullPath)
+        {
+            fullPath = string.Empty;
+
+            if (string.IsNullOrWhiteSpace(path) || path.Contains("..") || Path.IsPathRooted(path))
+            {
+                return false;
+            }
+
+            var screenshotsRoot = Path.GetFullPath(Path.Combine(_environment.ContentRootPath, "Screenshots"));
+            var requestedPath = Path.GetFullPath(Path.Combine(screenshotsRoot, path));
+
+            if (!requestedPath.StartsWith(screenshotsRoot, StringComparison.OrdinalIgnoreCase) || !Directory.Exists(requestedPath))
+            {
+                return false;
+            }
+
+            fullPath = requestedPath;
+            return true;
+        }
+
+        private static List<string> GetImageFiles(string fullPath)
+        {
+            return Directory.GetFiles(fullPath)
+                .Select(Path.GetFileName)
+                .Where(file => !string.IsNullOrWhiteSpace(file))
+                .OrderBy(file => file)
+                .ToList()!;
         }
     }
 }
