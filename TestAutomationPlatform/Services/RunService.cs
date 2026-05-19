@@ -1,10 +1,17 @@
-﻿using TestAutomationPlatform.Repository;
+using TestAutomationPlatform.Repository;
 using TestAutomationPlatform.Services;
 using TestAutomationPlatform.Data;
 using TestAutomationPlatform.Models;
 
 public class RunService
 {
+    private static readonly HashSet<string> AllowedEnvironments = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Dev",
+        "Preprod",
+        "Prod"
+    };
+
     private readonly IScriptRepository _scriptRepo;
     private readonly TestExecutionService _execution;
     private readonly AppDbContext _context;
@@ -20,17 +27,12 @@ public class RunService
 
     public async Task ExecuteRun(string environment = "Dev")
     {
-        var allowedEnvironments = new[] { "Dev", "Preprod", "Prod" };
-
-        if (!allowedEnvironments.Contains(environment))
-        {
-            environment = "Dev";
-        }
+        environment = NormalizeEnvironment(environment);
 
         var run = new Run
         {
             Environment = environment,
-            ScheduledAt = DateTime.Now,
+            ScheduledAt = DateTime.UtcNow,
             Status = "Running"
         };
 
@@ -56,12 +58,7 @@ public class RunService
 
     public async Task ExecuteRunByScriptId(int scriptId, string environment = "Dev")
     {
-        var allowedEnvironments = new[] { "Dev", "Preprod", "Prod" };
-
-        if (!allowedEnvironments.Contains(environment))
-        {
-            environment = "Dev";
-        }
+        environment = NormalizeEnvironment(environment);
 
         var script = await _scriptRepo.GetById(scriptId);
 
@@ -73,7 +70,7 @@ public class RunService
         var run = new Run
         {
             Environment = environment,
-            ScheduledAt = DateTime.Now,
+            ScheduledAt = DateTime.UtcNow,
             Status = "Running"
         };
 
@@ -86,7 +83,7 @@ public class RunService
         await _context.SaveChangesAsync();
     }
 
-    private async Task<(string status, string log, double time,string screenshotPath)> ExecuteSingleScript(Script script, string environment)
+    private async Task<(string status, string log, double time, string screenshotPath)> ExecuteSingleScript(Script script, string environment)
     {
         var result = await _execution.RunScript(script.Code);
 
@@ -97,12 +94,24 @@ public class RunService
             Status = result.status,
             Log = result.log,
             ExecutionTime = result.time,
-            ExecutedAt = DateTime.Now,
+            ExecutedAt = DateTime.UtcNow,
             ScreenshotPath = result.screenshotPath
         };
 
         _context.RunResults.Add(runResult);
 
         return result;
+    }
+
+    private static string NormalizeEnvironment(string? environment)
+    {
+        if (string.IsNullOrWhiteSpace(environment))
+        {
+            return "Dev";
+        }
+
+        return AllowedEnvironments.TryGetValue(environment, out var normalized)
+            ? normalized
+            : "Dev";
     }
 }
