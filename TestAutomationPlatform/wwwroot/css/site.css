@@ -8,8 +8,19 @@ html {
   }
 }
 
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+:root {
+  --app-bg: #f6f7f9;
+  --app-border: #e4e7ec;
+  --app-text-muted: #667085;
+}
+
+.btn:focus,
+.btn:active:focus,
+.btn-link.nav-link:focus,
+.form-control:focus,
+.form-check-input:focus,
+.form-select:focus {
+  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.22rem rgba(13, 110, 253, 0.24);
 }
 
 html {
@@ -18,14 +29,219 @@ html {
 }
 
 body {
-  margin-bottom: 60px;
+  min-height: 100vh;
+  margin-bottom: 0;
+  background: var(--app-bg);
+  color: #1f2937;
 }
 
-.form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
+.app-container {
+  width: min(100% - 32px, 1440px);
+  margin-inline: auto;
+}
+
+.app-header .navbar {
+  min-height: 64px;
+}
+
+.app-main {
+  padding-block: 28px 48px;
+}
+
+.app-footer {
+  padding: 18px 0;
+  border-top: 1px solid var(--app-border);
+  color: var(--app-text-muted);
+  background: #fff;
+}
+
+.page-header,
+.panel-header,
+.run-now-panel,
+.filter-bar,
+.metric-grid,
+.dashboard-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.page-header {
+  grid-template-columns: 1fr;
+  align-items: end;
+  margin-bottom: 20px;
+}
+
+@media (min-width: 768px) {
+  .page-header {
+    grid-template-columns: 1fr auto;
+  }
+}
+
+.run-now-panel {
+  grid-template-columns: minmax(180px, 220px) auto;
+  align-items: center;
+}
+
+.metric-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  margin-bottom: 18px;
+}
+
+.metric-card,
+.panel {
+  background: #fff;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+}
+
+.metric-card {
+  display: grid;
+  gap: 4px;
+  padding: 18px;
+}
+
+.metric-card strong {
+  font-size: 1.7rem;
+  line-height: 1.1;
+}
+
+.metric-label,
+.metric-note {
+  color: var(--app-text-muted);
+}
+
+.metric-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.metric-note {
+  font-size: 0.9rem;
+}
+
+.dashboard-grid {
+  grid-template-columns: 1fr;
+  margin-bottom: 18px;
+}
+
+@media (min-width: 992px) {
+  .dashboard-grid {
+    grid-template-columns: 0.85fr 1.15fr;
+  }
+}
+
+.panel {
+  margin-bottom: 18px;
+  padding: 18px;
+}
+
+.panel-header {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.filter-bar {
+  grid-template-columns: 1fr;
+  align-items: end;
+}
+
+@media (min-width: 992px) {
+  .filter-bar {
+    grid-template-columns: minmax(240px, 1fr) 220px 180px auto;
+  }
+}
+
+.filter-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.result-table thead th {
+  color: var(--app-text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.result-table tbody td {
+  border-color: #eef0f3;
+}
+
+.result-log {
+  max-height: 320px;
+  padding: 12px;
+  overflow: auto;
+  background: #101828;
+  color: #e5e7eb;
+  border-radius: 6px;
+  white-space: pre-wrap;
+  font-size: 0.85rem;
+}
+
+.empty-state {
+  display: grid;
+  gap: 6px;
+  place-items: center;
+  padding: 42px 16px;
+  color: var(--app-text-muted);
+  text-align: center;
+}
+
+.empty-state i {
+  font-size: 2rem;
+  color: #98a2b3;
+}
+
+.empty-state strong {
+  color: #344054;
+}
+
+.empty-state.compact {
+  padding: 24px 12px;
+}
+
+.screenshot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.screenshot-tile {
+  display: grid;
+  gap: 8px;
+  padding: 0;
+  overflow: hidden;
+  text-align: left;
+  background: #fff;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+}
+
+.screenshot-tile img {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  background: #f2f4f7;
+}
+
+.screenshot-tile span {
+  padding: 0 10px 10px;
+  color: var(--app-text-muted);
+  font-size: 0.85rem;
+  word-break: break-word;
+}
+
+.form-floating > .form-control-plaintext::placeholder,
+.form-floating > .form-control::placeholder {
   color: var(--bs-secondary-color);
   text-align: end;
 }
 
-.form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
+.form-floating > .form-control-plaintext:focus::placeholder,
+.form-floating > .form-control:focus::placeholder {
   text-align: start;
 }
