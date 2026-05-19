@@ -1,0 +1,208 @@
+@model TestAutomationPlatform.Models.ScriptFormViewModel
+
+<div class="step-builder" data-step-builder>
+    <div class="step-builder-header">
+        <div>
+            <label asp-for="Code" class="form-label mb-1">Playwright stappen</label>
+            <p class="text-muted mb-0 small">Bouw je test met knoppen. De JSON wordt automatisch bijgewerkt.</p>
+        </div>
+
+        <div class="step-toolbar" aria-label="Stap toevoegen">
+            <button type="button" class="btn btn-sm btn-outline-primary" data-add-step="goto"><i class="bi bi-box-arrow-up-right me-1"></i>Open URL</button>
+            <button type="button" class="btn btn-sm btn-outline-primary" data-add-step="click"><i class="bi bi-cursor me-1"></i>Click</button>
+            <button type="button" class="btn btn-sm btn-outline-primary" data-add-step="fill"><i class="bi bi-input-cursor-text me-1"></i>Fill</button>
+            <button type="button" class="btn btn-sm btn-outline-primary" data-add-step="asserttext"><i class="bi bi-search me-1"></i>Assert text</button>
+            <button type="button" class="btn btn-sm btn-outline-primary" data-add-step="waitforselector"><i class="bi bi-hourglass-split me-1"></i>Wait element</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-add-step="screenshot"><i class="bi bi-camera me-1"></i>Screenshot</button>
+        </div>
+    </div>
+
+    <div class="step-builder-table-wrap">
+        <table class="table align-middle step-builder-table mb-0">
+            <thead>
+                <tr>
+                    <th style="width: 52px;">#</th>
+                    <th style="width: 190px;">Actie</th>
+                    <th>Selector</th>
+                    <th>Value</th>
+                    <th style="width: 140px;">Timeout</th>
+                    <th class="text-end" style="width: 140px;">Acties</th>
+                </tr>
+            </thead>
+            <tbody data-step-list></tbody>
+        </table>
+    </div>
+
+    <div class="step-builder-empty" data-step-empty>
+        <i class="bi bi-ui-checks-grid"></i>
+        <strong>Nog geen stappen</strong>
+        <span>Kies hierboven wat Playwright moet doen.</span>
+    </div>
+
+    <details class="script-help mt-3">
+        <summary>Advanced JSON</summary>
+        <textarea asp-for="Code" class="form-control code-editor mt-3" rows="14" data-step-json></textarea>
+        <span asp-validation-for="Code" class="text-danger"></span>
+        <p class="text-muted small mt-2 mb-0">Je kunt JSON handmatig aanpassen. De builder leest wijzigingen terug zodra dit veld verandert.</p>
+    </details>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('[data-step-builder]').forEach(initializeStepBuilder);
+    });
+
+    function initializeStepBuilder(builder) {
+        const list = builder.querySelector('[data-step-list]');
+        const emptyState = builder.querySelector('[data-step-empty]');
+        const jsonInput = builder.querySelector('[data-step-json]');
+        const actions = [
+            'goto', 'click', 'fill', 'press', 'wait', 'waitforselector', 'asserttitle', 'asserturl',
+            'assertelement', 'asserttext', 'select', 'check', 'uncheck', 'screenshot'
+        ];
+
+        const stepMeta = {
+            goto: { selector: false, value: true, valuePlaceholder: 'https://example.com' },
+            click: { selector: true, value: false, selectorPlaceholder: '#login' },
+            fill: { selector: true, value: true, selectorPlaceholder: '#email', valuePlaceholder: 'user@example.com' },
+            press: { selector: true, value: true, selectorPlaceholder: 'body', valuePlaceholder: 'Enter' },
+            wait: { selector: false, value: true, valuePlaceholder: '1000' },
+            waitforselector: { selector: true, value: false, selectorPlaceholder: '.loaded' },
+            asserttitle: { selector: false, value: true, valuePlaceholder: 'Dashboard' },
+            asserturl: { selector: false, value: true, valuePlaceholder: '/dashboard' },
+            assertelement: { selector: true, value: true, selectorPlaceholder: '.toast', valuePlaceholder: 'visible of hidden' },
+            asserttext: { selector: true, value: true, selectorPlaceholder: 'h1', valuePlaceholder: 'Welcome' },
+            select: { selector: true, value: true, selectorPlaceholder: 'select[name=country]', valuePlaceholder: 'NL' },
+            check: { selector: true, value: false, selectorPlaceholder: '#terms' },
+            uncheck: { selector: true, value: false, selectorPlaceholder: '#newsletter' },
+            screenshot: { selector: false, value: false }
+        };
+
+        function parseInitialSteps() {
+            if (!jsonInput.value.trim()) return [];
+
+            try {
+                const parsed = JSON.parse(jsonInput.value);
+                return Array.isArray(parsed) ? parsed : [];
+            } catch {
+                return [];
+            }
+        }
+
+        function addStep(action, step = {}) {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="step-number text-muted"></td>
+                <td>
+                    <select class="form-select form-select-sm" data-field="action">
+                        ${actions.map(item => `<option value="${item}" ${item === action ? 'selected' : ''}>${item}</option>`).join('')}
+                    </select>
+                </td>
+                <td><input class="form-control form-control-sm" data-field="selector" value="${escapeHtml(step.selector ?? step.Selector ?? '')}" /></td>
+                <td><input class="form-control form-control-sm" data-field="value" value="${escapeHtml(step.value ?? step.Value ?? '')}" /></td>
+                <td><input class="form-control form-control-sm" data-field="timeout" type="number" min="1" step="500" value="${escapeHtml(step.timeout ?? step.Timeout ?? '')}" /></td>
+                <td class="text-end">
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-secondary" data-move="up" title="Omhoog"><i class="bi bi-arrow-up"></i></button>
+                        <button type="button" class="btn btn-outline-secondary" data-move="down" title="Omlaag"><i class="bi bi-arrow-down"></i></button>
+                        <button type="button" class="btn btn-outline-danger" data-remove-step title="Verwijder"><i class="bi bi-trash"></i></button>
+                    </div>
+                </td>`;
+
+            list.appendChild(row);
+            applyActionHints(row);
+            syncJson();
+        }
+
+        function collectSteps() {
+            return Array.from(list.querySelectorAll('tr')).map(row => {
+                const step = { action: row.querySelector('[data-field="action"]').value };
+                const selector = row.querySelector('[data-field="selector"]').value.trim();
+                const value = row.querySelector('[data-field="value"]').value.trim();
+                const timeout = row.querySelector('[data-field="timeout"]').value.trim();
+
+                if (selector) step.selector = selector;
+                if (value) step.value = value;
+                if (timeout) step.timeout = Number(timeout);
+
+                return step;
+            });
+        }
+
+        function syncJson() {
+            const steps = collectSteps();
+            jsonInput.value = steps.length ? JSON.stringify(steps, null, 2) : '';
+            refreshNumbers();
+        }
+
+        function refreshNumbers() {
+            const rows = Array.from(list.querySelectorAll('tr'));
+            rows.forEach((row, index) => row.querySelector('.step-number').textContent = index + 1);
+            emptyState.style.display = rows.length ? 'none' : 'grid';
+        }
+
+        function applyActionHints(row) {
+            const action = row.querySelector('[data-field="action"]').value;
+            const meta = stepMeta[action] ?? { selector: true, value: true };
+            const selectorInput = row.querySelector('[data-field="selector"]');
+            const valueInput = row.querySelector('[data-field="value"]');
+
+            selectorInput.placeholder = meta.selectorPlaceholder ?? '';
+            valueInput.placeholder = meta.valuePlaceholder ?? '';
+            selectorInput.disabled = !meta.selector;
+            valueInput.disabled = !meta.value;
+
+            if (!meta.selector) selectorInput.value = '';
+            if (!meta.value) valueInput.value = '';
+        }
+
+        function reloadFromJson() {
+            const steps = parseInitialSteps();
+            list.innerHTML = '';
+            steps.forEach(step => addStep((step.action ?? step.Action ?? 'goto').toLowerCase(), step));
+            refreshNumbers();
+        }
+
+        builder.addEventListener('click', event => {
+            const addButton = event.target.closest('[data-add-step]');
+            if (addButton) addStep(addButton.dataset.addStep);
+
+            const removeButton = event.target.closest('[data-remove-step]');
+            if (removeButton) {
+                removeButton.closest('tr').remove();
+                syncJson();
+            }
+
+            const moveButton = event.target.closest('[data-move]');
+            if (moveButton) {
+                const row = moveButton.closest('tr');
+                if (moveButton.dataset.move === 'up' && row.previousElementSibling) {
+                    list.insertBefore(row, row.previousElementSibling);
+                }
+                if (moveButton.dataset.move === 'down' && row.nextElementSibling) {
+                    list.insertBefore(row.nextElementSibling, row);
+                }
+                syncJson();
+            }
+        });
+
+        builder.addEventListener('input', event => {
+            if (event.target.matches('[data-field]')) {
+                if (event.target.dataset.field === 'action') applyActionHints(event.target.closest('tr'));
+                syncJson();
+            }
+        });
+
+        jsonInput.addEventListener('change', reloadFromJson);
+        reloadFromJson();
+    }
+
+    function escapeHtml(value) {
+        return String(value)
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#039;');
+    }
+</script>
