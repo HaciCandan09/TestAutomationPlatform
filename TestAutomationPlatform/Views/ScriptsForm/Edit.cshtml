@@ -1,80 +1,73 @@
-﻿@model TestAutomationPlatform.Models.ScriptFormViewModel
+@model TestAutomationPlatform.Models.ScriptFormViewModel
 
 @{
     ViewData["Title"] = "Script Bewerken";
 }
 
-<div class="container mt-4">
-    <div class="mb-4">
-        <h2 class="mb-1">Script Bewerken</h2>
-        <p class="text-muted mb-0">Pas je testscript aan</p>
+<section class="page-header">
+    <div>
+        <p class="text-muted mb-1">Script library</p>
+        <h1 class="h3 mb-0">Script bewerken</h1>
     </div>
+</section>
 
-    <div class="card shadow-sm border-0">
-        <div class="card-body">
+<section class="panel">
+    <form asp-controller="ScriptsForm" asp-action="Edit" method="post" class="script-form">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="Id" />
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
-            <form asp-controller="ScriptsForm" asp-action="Edit" method="post">
-                @Html.AntiForgeryToken()
+        <div class="row g-3">
+            <div class="col-lg-6">
+                <label asp-for="Name" class="form-label">Script naam</label>
+                <input asp-for="Name" class="form-control" placeholder="Bijv. Login smoke test" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
 
-                <input type="hidden" asp-for="Id" />
+            <div class="col-lg-2">
+                <label asp-for="WorkspaceId" class="form-label">Workspace</label>
+                <select asp-for="WorkspaceId" asp-items="Model.Workspaces" class="form-select">
+                    <option value="0">Kies</option>
+                </select>
+                <span asp-validation-for="WorkspaceId" class="text-danger"></span>
+            </div>
 
-                <div class="mb-3">
-                    <label asp-for="Name" class="form-label">Script naam</label>
-                    <input asp-for="Name" class="form-control" placeholder="Voer een scriptnaam in" />
-                    <span asp-validation-for="Name" class="text-danger"></span>
-                </div>
+            <div class="col-lg-2">
+                <label asp-for="TestSuiteId" class="form-label">TestSuite</label>
+                <select asp-for="TestSuiteId" asp-items="Model.TestSuites" class="form-select">
+                    <option value="0">Kies</option>
+                </select>
+                <span asp-validation-for="TestSuiteId" class="text-danger"></span>
+            </div>
 
-                <div class="mb-3">
-                    <label asp-for="WorkspaceId" class="form-label">Workspace</label>
-                    <select asp-for="WorkspaceId" asp-items="Model.Workspaces" class="form-select">
-                        <option value="">-- Kies een workspace --</option>
-                    </select>
-                    <span asp-validation-for="WorkspaceId" class="text-danger"></span>
-                </div>
-
-                <div class="mb-3">
-                    <label asp-for="TestSuiteId" class="form-label">TestSuite</label>
-                    <select asp-for="TestSuiteId" asp-items="Model.TestSuites" class="form-select">
-                        <option value="">-- Kies een testsuite --</option>
-                    </select>
-                    <span asp-validation-for="TestSuiteId" class="text-danger"></span>
-                </div>
-
-                <div class="mb-3">
-                    <label asp-for="CategoryId" class="form-label">Categorie</label>
-                    <select asp-for="CategoryId" asp-items="Model.Categories" class="form-select">
-                        <option value="">-- Kies een categorie --</option>
-                    </select>
-                    <span asp-validation-for="CategoryId" class="text-danger"></span>
-                </div>
-
-                <div class="mb-3">
-                    <label asp-for="Code" class="form-label">Script JSON</label>
-                    <textarea asp-for="Code"
-                              class="form-control"
-                              rows="12"
-                              placeholder="Voer hier de JSON-stappen van het script in"></textarea>
-                    <span asp-validation-for="Code" class="text-danger"></span>
-                    <small class="text-muted">
-                        Gebruik acties zoals goto, click, fill, wait, asserttitle en assertelement.
-                    </small>
-                </div>
-
-                <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-warning">
-                        <i class="bi bi-save"></i> Opslaan
-                    </button>
-
-                    <a asp-controller="ScriptsForm" asp-action="Index" class="btn btn-secondary">
-                        Terug
-                    </a>
-                </div>
-
-            </form>
-
+            <div class="col-lg-2">
+                <label asp-for="CategoryId" class="form-label">Categorie</label>
+                <select asp-for="CategoryId" asp-items="Model.Categories" class="form-select">
+                    <option value="0">Kies</option>
+                </select>
+                <span asp-validation-for="CategoryId" class="text-danger"></span>
+            </div>
         </div>
-    </div>
-</div>
+
+        <div class="mt-3">
+            <label asp-for="Code" class="form-label">Script JSON</label>
+            <textarea asp-for="Code" class="form-control code-editor" rows="16" placeholder="Plak hier je JSON-stappen"></textarea>
+            <span asp-validation-for="Code" class="text-danger"></span>
+        </div>
+
+        <details class="script-help mt-3">
+            <summary>Ondersteunde acties</summary>
+            <p class="text-muted mt-2 mb-0">Beschikbaar: goto, click, fill, press, wait, waitforselector, asserttitle, asserturl, assertelement, asserttext, select, check, uncheck en screenshot. Voeg optioneel <code>timeout</code> toe in milliseconden.</p>
+        </details>
+
+        <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-warning">
+                <i class="bi bi-save me-1"></i>Opslaan
+            </button>
+            <a asp-controller="ScriptsForm" asp-action="Index" class="btn btn-outline-secondary">Terug</a>
+        </div>
+    </form>
+</section>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
