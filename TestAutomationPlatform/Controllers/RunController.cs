@@ -1,9 +1,16 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 
 namespace TestAutomationPlatform.Controllers
 {
     public class RunController : Controller
     {
+        private static readonly HashSet<string> AllowedEnvironments = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "Dev",
+            "Preprod",
+            "Prod"
+        };
+
         private readonly RunService _runService;
 
         public RunController(RunService runService)
@@ -12,10 +19,27 @@ namespace TestAutomationPlatform.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> StartRun(string environment)
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> StartRun(string? environment)
         {
-            await _runService.ExecuteRun(environment);
-            return RedirectToAction("Index", "Dashboard");
+            var normalizedEnvironment = NormalizeEnvironment(environment);
+
+            await _runService.ExecuteRun(normalizedEnvironment);
+            TempData["Message"] = $"Test run gestart voor {normalizedEnvironment}.";
+
+            return RedirectToAction("Index", "Dashboard", new { environment = normalizedEnvironment });
+        }
+
+        private static string NormalizeEnvironment(string? environment)
+        {
+            if (string.IsNullOrWhiteSpace(environment))
+            {
+                return "Dev";
+            }
+
+            return AllowedEnvironments.TryGetValue(environment, out var normalized)
+                ? normalized
+                : "Dev";
         }
     }
 }
