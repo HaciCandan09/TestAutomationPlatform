@@ -171,6 +171,12 @@ body {
   border-color: #eef0f3;
 }
 
+.result-log,
+.script-preview,
+.code-editor {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
+
 .result-log {
   max-height: 320px;
   padding: 12px;
@@ -180,6 +186,36 @@ body {
   border-radius: 6px;
   white-space: pre-wrap;
   font-size: 0.85rem;
+}
+
+.script-preview {
+  max-height: 128px;
+  padding: 10px;
+  overflow: auto;
+  background: #f8fafc;
+  border: 1px solid var(--app-border);
+  border-radius: 6px;
+  color: #344054;
+  font-size: 0.78rem;
+  white-space: pre-wrap;
+}
+
+.code-editor {
+  min-height: 360px;
+  line-height: 1.55;
+  tab-size: 2;
+}
+
+.script-help {
+  padding: 12px 14px;
+  background: #f8fafc;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+}
+
+.script-help summary {
+  cursor: pointer;
+  font-weight: 600;
 }
 
 .empty-state {
