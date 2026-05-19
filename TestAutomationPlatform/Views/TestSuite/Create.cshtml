@@ -1,0 +1,29 @@
+@model TestSuite
+
+@{
+    ViewData["Title"] = "Nieuwe TestSuite";
+}
+
+<section class="page-header"><div><p class="text-muted mb-1">TestSuites</p><h1 class="h3 mb-0">Nieuwe testsuite</h1></div></section>
+
+<section class="panel">
+    <form asp-action="Create" method="post" class="entity-form">
+        @Html.AntiForgeryToken()
+        <div class="mb-3">
+            <label asp-for="Name" class="form-label">Naam</label>
+            <input asp-for="Name" class="form-control" placeholder="Bijv. Checkout flow" />
+            <span asp-validation-for="Name" class="text-danger"></span>
+        </div>
+        <div class="mb-3">
+            <label asp-for="WorkspaceId" class="form-label">Workspace</label>
+            <select asp-for="WorkspaceId" asp-items="ViewBag.Workspaces" class="form-select">
+                <option value="0">Kies een workspace</option>
+            </select>
+            <span asp-validation-for="WorkspaceId" class="text-danger"></span>
+        </div>
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-success"><i class="bi bi-check2 me-1"></i>Opslaan</button>
+            <a asp-action="Index" class="btn btn-outline-secondary">Terug</a>
+        </div>
+    </form>
+</section>
