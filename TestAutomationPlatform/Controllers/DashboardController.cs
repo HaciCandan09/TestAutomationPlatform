@@ -85,7 +85,7 @@ namespace TestAutomationPlatform.Controllers
             ViewBag.PassedRuns = results.Count(x => x.Passed);
             ViewBag.FailedRuns = results.Count(x => x.Failed);
             ViewBag.AverageExecutionTime = results.Count == 0 ? 0 : results.Average(x => x.ExecutionTime);
-            ViewBag.LastRunAt = results.Count == 0 ? null : results.Max(x => x.ExecutedAt);
+            ViewBag.LastRunAt = results.Count == 0 ? (DateTime?)null : results.Max(x => x.ExecutedAt);
         }
     }
 }
