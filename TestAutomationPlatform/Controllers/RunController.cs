@@ -1,3 +1,4 @@
+using Hangfire;
 using Microsoft.AspNetCore.Mvc;
 
 namespace TestAutomationPlatform.Controllers
@@ -11,21 +12,21 @@ namespace TestAutomationPlatform.Controllers
             "Prod"
         };
 
-        private readonly RunService _runService;
+        private readonly IBackgroundJobClient _backgroundJobs;
 
-        public RunController(RunService runService)
+        public RunController(IBackgroundJobClient backgroundJobs)
         {
-            _runService = runService;
+            _backgroundJobs = backgroundJobs;
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> StartRun(string? environment)
+        public IActionResult StartRun(string? environment)
         {
             var normalizedEnvironment = NormalizeEnvironment(environment);
 
-            await _runService.ExecuteRun(normalizedEnvironment);
-            TempData["Message"] = $"Test run gestart voor {normalizedEnvironment}.";
+            _backgroundJobs.Enqueue<RunService>(service => service.ExecuteRun(normalizedEnvironment));
+            TempData["Message"] = $"Test run voor {normalizedEnvironment} is ingepland.";
 
             return RedirectToAction("Index", "Dashboard", new { environment = normalizedEnvironment });
         }
