@@ -1,13 +1,11 @@
-﻿using System.Text.Json.Serialization;
-
 namespace TestAutomationPlatform.Models
 {
     public class Script
     {
         public int Id { get; set; }
-        public string Name { get; set; }
-        public string Code { get; set; }
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public string Name { get; set; } = string.Empty;
+        public string Code { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public int WorkspaceId { get; set; }
         public Workspace? Workspace { get; set; }
