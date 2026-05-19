@@ -7,11 +7,17 @@
     var passedRuns = (int)ViewBag.PassedRuns;
     var failedRuns = (int)ViewBag.FailedRuns;
     var avgExecutionTime = (double)ViewBag.AverageExecutionTime;
-    DateTime? lastRunAt = ViewBag.LastRunAt as DateTime?;
+    var lastRunAt = ViewBag.LastRunAt is DateTime value ? value : (DateTime?)null;
     var selectedEnvironment = (string)ViewBag.Environment;
     var selectedStatus = (string)ViewBag.Status;
     var search = (string)ViewBag.Search;
     var resultLimit = (int)ViewBag.ResultLimit;
+
+    var devSelected = selectedEnvironment == "Dev" ? "selected" : null;
+    var preprodSelected = selectedEnvironment == "Preprod" ? "selected" : null;
+    var prodSelected = selectedEnvironment == "Prod" ? "selected" : null;
+    var passSelected = selectedStatus == "Pass" ? "selected" : null;
+    var failSelected = selectedStatus == "Fail" ? "selected" : null;
 
     var passRate = totalRuns == 0 ? 0 : Math.Round((double)passedRuns / totalRuns * 100, 1);
 
@@ -36,9 +42,9 @@
 
     <form method="post" asp-controller="Run" asp-action="StartRun" class="run-now-panel">
         <select name="environment" class="form-select" aria-label="Environment">
-            <option value="Dev" selected="@(selectedEnvironment == "Dev")">Development</option>
-            <option value="Preprod" selected="@(selectedEnvironment == "Preprod")">Pre-production</option>
-            <option value="Prod" selected="@(selectedEnvironment == "Prod")">Production</option>
+            <option value="Dev" selected="@devSelected">Development</option>
+            <option value="Preprod" selected="@preprodSelected">Pre-production</option>
+            <option value="Prod" selected="@prodSelected">Production</option>
         </select>
 
         <button type="submit" class="btn btn-primary">
@@ -105,9 +111,9 @@
             <label for="environment" class="form-label">Environment</label>
             <select id="environment" name="environment" class="form-select">
                 <option value="">Alle</option>
-                <option value="Dev" selected="@(selectedEnvironment == "Dev")">Development</option>
-                <option value="Preprod" selected="@(selectedEnvironment == "Preprod")">Pre-production</option>
-                <option value="Prod" selected="@(selectedEnvironment == "Prod")">Production</option>
+                <option value="Dev" selected="@devSelected">Development</option>
+                <option value="Preprod" selected="@preprodSelected">Pre-production</option>
+                <option value="Prod" selected="@prodSelected">Production</option>
             </select>
         </div>
 
@@ -115,8 +121,8 @@
             <label for="status" class="form-label">Status</label>
             <select id="status" name="status" class="form-select">
                 <option value="">Alle</option>
-                <option value="Pass" selected="@(selectedStatus == "Pass")">Pass</option>
-                <option value="Fail" selected="@(selectedStatus == "Fail")">Fail</option>
+                <option value="Pass" selected="@passSelected">Pass</option>
+                <option value="Fail" selected="@failSelected">Fail</option>
             </select>
         </div>
 
