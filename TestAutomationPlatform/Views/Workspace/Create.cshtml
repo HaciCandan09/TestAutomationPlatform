@@ -1,0 +1,22 @@
+@model Workspace
+
+@{
+    ViewData["Title"] = "Nieuwe Workspace";
+}
+
+<section class="page-header"><div><p class="text-muted mb-1">Workspaces</p><h1 class="h3 mb-0">Nieuwe workspace</h1></div></section>
+
+<section class="panel">
+    <form asp-action="Create" method="post" class="entity-form">
+        @Html.AntiForgeryToken()
+        <div class="mb-3">
+            <label asp-for="Name" class="form-label">Naam</label>
+            <input asp-for="Name" class="form-control" placeholder="Bijv. Webshop" />
+            <span asp-validation-for="Name" class="text-danger"></span>
+        </div>
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-success"><i class="bi bi-check2 me-1"></i>Opslaan</button>
+            <a asp-action="Index" class="btn btn-outline-secondary">Terug</a>
+        </div>
+    </form>
+</section>
