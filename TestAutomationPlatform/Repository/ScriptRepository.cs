@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using TestAutomationPlatform.Data;
 using TestAutomationPlatform.Models;
 
@@ -22,7 +22,7 @@ namespace TestAutomationPlatform.Repository
                 .ToListAsync();
         }
 
-        public async Task<Script> GetById(int id)
+        public async Task<Script?> GetById(int id)
         {
             return await _context.Scripts
                 .Include(s => s.Workspace)
