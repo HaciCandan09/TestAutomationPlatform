@@ -1,4 +1,4 @@
-﻿@model List<string>
+@model List<string>
 
 @{
     var path = ViewBag.Path as string;
@@ -6,39 +6,23 @@
 
 @if (Model == null || !Model.Any())
 {
-    <div class="alert alert-info mb-0">
-        Geen screenshots gevonden.
+    <div class="empty-state compact">
+        <i class="bi bi-image"></i>
+        <strong>Geen screenshots gevonden</strong>
+        <span>Voor deze run zijn geen beelden beschikbaar.</span>
     </div>
 }
 else
 {
-    <div class="row">
+    <div class="screenshot-grid">
         @foreach (var file in Model)
         {
-            <div class="col-md-4 mb-3">
-                <div class="card shadow-sm border-0">
-                    
-                    <!-- klik IMAGE -->
-                    <img src="/screenshots/@path/@file"
-                         class="card-img-top img-fluid screenshot-thumb"
-                         style="cursor:pointer; object-fit: cover; max-height: 220px;"
-                         onclick="openFullscreen('/screenshots/@path/@file')" />
+            var imagePath = $"/screenshots/{path}/{file}";
 
-                    <div class="card-body p-2">
-                        <small class="text-muted">@file</small>
-                    </div>
-                </div>
-            </div>
+            <button type="button" class="screenshot-tile" data-fullscreen-image="@imagePath">
+                <img src="@imagePath" alt="Screenshot @file" />
+                <span>@file</span>
+            </button>
         }
     </div>
 }
-
-<!-- FULLSCREEN Mode -->
-<div id="fullscreenOverlay"
-     style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
-    background:rgba(0,0,0,0.9); z-index:9999; justify-content:center; align-items:center;"
-     onclick="closeFullscreen()">
-
-    <img id="fullscreenImage"
-         style="max-width:90%; max-height:90%; box-shadow:0 0 20px #000;" />
-</div>
