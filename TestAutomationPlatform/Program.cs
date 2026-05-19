@@ -8,7 +8,6 @@ using TestAutomationPlatform.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-
 // Controllers + Swagger
 builder.Services.AddControllersWithViews();
 builder.Services.AddEndpointsApiExplorer();
@@ -34,20 +33,24 @@ builder.Services.AddHangfireServer();
 
 var app = builder.Build();
 
+var screenshotsPath = Path.Combine(app.Environment.ContentRootPath, "Screenshots");
+Directory.CreateDirectory(screenshotsPath);
+
 // Hangfire dashboard
 app.UseHangfireDashboard();
 
 // Swagger
-app.UseSwagger();
-app.UseSwaggerUI();
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
-//screenshots ophalen
 app.UseStaticFiles();
 
 app.UseStaticFiles(new StaticFileOptions
 {
-    FileProvider = new PhysicalFileProvider(
-        Path.Combine(Directory.GetCurrentDirectory(), "Screenshots")),
+    FileProvider = new PhysicalFileProvider(screenshotsPath),
     RequestPath = "/screenshots"
 });
 
@@ -69,27 +72,30 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
 
+if (app.Configuration.GetValue<bool>("Hangfire:EnqueueStartupRun"))
+{
+    BackgroundJob.Enqueue<RunService>(x => x.ExecuteRun("Dev"));
+}
 
+if (app.Configuration.GetValue("Hangfire:EnableRecurringJobs", true))
+{
+    RecurringJob.AddOrUpdate<RunService>(
+        "run-tests-dev",
+        x => x.ExecuteRun("Dev"),
+        Cron.MinuteInterval(5)
+    );
 
+    RecurringJob.AddOrUpdate<RunService>(
+        "run-tests-preprod",
+        x => x.ExecuteRun("Preprod"),
+        Cron.HourInterval(1)
+    );
 
-BackgroundJob.Enqueue<RunService>(x => x.ExecuteRun("Dev"));
-
-RecurringJob.AddOrUpdate<RunService>(
-    "run-tests-dev",
-    x => x.ExecuteRun("Dev"),
-    Cron.MinuteInterval(5)
-);
-
-RecurringJob.AddOrUpdate<RunService>(
-    "run-tests-preprod",
-    x => x.ExecuteRun("Preprod"),
-    Cron.HourInterval(1)
-);
-
-RecurringJob.AddOrUpdate<RunService>(
-    "run-tests-prod",
-    x => x.ExecuteRun("Prod"),
-    Cron.Daily()
-);
+    RecurringJob.AddOrUpdate<RunService>(
+        "run-tests-prod",
+        x => x.ExecuteRun("Prod"),
+        Cron.Daily()
+    );
+}
 
 app.Run();
