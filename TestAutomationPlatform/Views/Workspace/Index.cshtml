@@ -1,0 +1,57 @@
+@model List<Workspace>
+
+@{
+    ViewData["Title"] = "Workspaces";
+}
+
+<section class="page-header">
+    <div>
+        <p class="text-muted mb-1">Beheer</p>
+        <h1 class="h3 mb-0">Workspaces</h1>
+    </div>
+    <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Nieuwe workspace</a>
+</section>
+
+@if (TempData["Message"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">@TempData["Message"]<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">@TempData["Error"]<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>
+}
+
+<section class="panel">
+    @if (!Model.Any())
+    {
+        <div class="empty-state"><i class="bi bi-folder"></i><strong>Geen workspaces</strong><span>Maak een workspace aan om scripts en suites te groeperen.</span></div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle result-table mb-0">
+                <thead><tr><th>Naam</th><th>Suites</th><th>Scripts</th><th class="text-end">Acties</th></tr></thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@item.Name</td>
+                            <td>@item.TestSuites.Count</td>
+                            <td>@item.Scripts.Count</td>
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm">
+                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-outline-secondary" title="Bewerken"><i class="bi bi-pencil"></i></a>
+                                    <form asp-action="Delete" method="post" class="d-inline-flex" onsubmit="return confirm('Workspace verwijderen?');">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@item.Id" />
+                                        <button class="btn btn-outline-danger" title="Verwijderen"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
