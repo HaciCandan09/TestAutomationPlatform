@@ -1,0 +1,374 @@
+﻿@model List<TestAutomationPlatform.Models.DashboardViewModel>
+
+@{
+    ViewData["Title"] = "Test Dashboard";
+
+    var totalRuns = Model.Count;
+    var passedRuns = Model.Count(x => x.Status == "Pass");
+    var failedRuns = Model.Count(x => x.Status == "Fail");
+    var avgExecutionTime = Model.Any() ? Model.Average(x => x.ExecutionTime) : 0;
+
+    var runsPerScript = Model
+        .GroupBy(x => x.ScriptName)
+        .Select(g => new
+        {
+            ScriptName = g.Key,
+            Count = g.Count()
+        })
+        .OrderByDescending(x => x.Count)
+        .ToList();
+
+    var statusLabels = new[] { "Pass", "Fail" };
+    var statusData = new[] { passedRuns, failedRuns };
+
+    var scriptLabels = runsPerScript.Select(x => x.ScriptName).ToList();
+    var scriptData = runsPerScript.Select(x => x.Count).ToList();
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">Test Dashboard</h2>
+            <p class="text-muted mb-0">Overzicht van de laatste testresultaten</p>
+        </div>
+
+        <form method="post" asp-controller="Run" asp-action="StartRun" class="d-flex gap-2">
+            <select name="environment" class="form-select" style="max-width: 200px;">
+                <option value="Dev">Development</option>
+                <option value="Preprod">Pre-Production</option>
+                <option value="Prod">Production</option>
+            </select>
+
+            <button type="submit" class="btn btn-primary">
+                Run Tests Now
+            </button>
+        </form>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h6 class="text-muted">Totaal Runs</h6>
+                    <h3 class="mb-0">@totalRuns</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h6 class="text-muted">Passed</h6>
+                    <h3 class="mb-0 text-success">@passedRuns</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h6 class="text-muted">Failed</h6>
+                    <h3 class="mb-0 text-danger">@failedRuns</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h6 class="text-muted">Gem. Uitvoertijd</h6>
+                    <h3 class="mb-0">@Math.Round(avgExecutionTime, 2) s</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-5 mb-3">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Pass / Fail verhouding</h5>
+                    <canvas id="statusChart" height="220"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-7 mb-3">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Aantal runs per script</h5>
+                    <canvas id="scriptChart" height="220"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label for="searchInput" class="form-label">Zoek op scriptnaam</label>
+                    <input type="text" id="searchInput" class="form-control" placeholder="Bijv. Login Test" />
+                </div>
+
+                <div class="col-md-2">
+                    <label for="statusFilter" class="form-label">Filter op status</label>
+                    <select id="statusFilter" class="form-select">
+                        <option value="">Alle</option>
+                        <option value="Pass">Pass</option>
+                        <option value="Fail">Fail</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label for="environmentFilter" class="form-label">Filter op environment</label>
+                    <select id="environmentFilter" class="form-select">
+                        <option value="">Alle</option>
+                        <option value="Dev">Development</option>
+                        <option value="Preprod">Pre-Production</option>
+                        <option value="Prod">Production</option>
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <label for="sortDate" class="form-label">Sortering</label>
+                    <select id="sortDate" class="form-select">
+                        <option value="desc">Nieuwste eerst</option>
+                        <option value="asc">Oudste eerst</option>
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <button type="button" class="btn btn-outline-secondary w-100" onclick="resetFilters()">
+                        Reset
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body">
+            @if (!Model.Any())
+            {
+                <div class="alert alert-info mb-0">
+                    Er zijn nog geen testresultaten beschikbaar.
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle" id="resultsTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Script</th>
+                                <th>Environment</th>
+                                <th>Status</th>
+                                <th>Execution Time</th>
+                                <th>Executed At</th>
+                                <th>Log</th>
+                                <th>Screenshots</th>
+                                <th>Defect</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="resultsBody">
+                            @await Html.PartialAsync("PartialDataRefresh", Model)
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="text-muted mt-3">
+                    Laatste update: @DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss")
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="screenshotModal" tabindex="-1" aria-labelledby="screenshotModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Screenshots</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="screenshotModalBody">
+                <div class="text-muted">Laden...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    function openFullscreen(src) {
+    const overlay = document.getElementById("fullscreenOverlay");
+    const img = document.getElementById("fullscreenImage");
+
+    if (!overlay || !img) return;
+
+    img.src = src;
+    overlay.style.display = "flex";
+    }
+
+    function closeFullscreen() {
+    const overlay = document.getElementById("fullscreenOverlay");
+    if (overlay) {
+    overlay.style.display = "none";
+    }
+    }
+
+    document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") {
+    closeFullscreen();
+    }
+    });
+
+    async function openScreenshotModal(path) {
+    const modalBody = document.getElementById("screenshotModalBody");
+    modalBody.innerHTML = '<div class="text-muted">Laden...</div>';
+
+    try {
+    const response = await fetch(`/Screenshots/RunImages?path=${encodeURIComponent(path)}`);
+    const html = await response.text();
+    modalBody.innerHTML = html;
+
+    const modal = new bootstrap.Modal(document.getElementById('screenshotModal'));
+    modal.show();
+    } catch (error) {
+    modalBody.innerHTML = '<div class="alert alert-danger">Kon screenshots niet laden.</div>';
+    }
+    }
+
+    const statusLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(statusLabels));
+    const statusData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(statusData));
+
+    const scriptLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(scriptLabels));
+    const scriptData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(scriptData));
+
+    const statusCtx = document.getElementById('statusChart').getContext('2d');
+    new Chart(statusCtx, {
+    type: 'doughnut',
+    data: {
+    labels: statusLabels,
+    datasets: [{
+    data: statusData,
+    backgroundColor: ['#198754', '#dc3545'],
+    borderWidth: 1
+    }]
+    },
+    options: {
+    responsive: true,
+    plugins: {
+    legend: {
+    position: 'bottom'
+    }
+    }
+    }
+    });
+
+    const scriptCtx = document.getElementById('scriptChart').getContext('2d');
+    new Chart(scriptCtx, {
+    type: 'bar',
+    data: {
+    labels: scriptLabels,
+    datasets: [{
+    label: 'Aantal runs',
+    data: scriptData,
+    backgroundColor: '#0d6efd',
+    borderWidth: 1
+    }]
+    },
+    options: {
+    responsive: true,
+    plugins: {
+    legend: {
+    display: false
+    }
+    },
+    scales: {
+    y: {
+    beginAtZero: true,
+    ticks: {
+    precision: 0
+    }
+    }
+    }
+    }
+    });
+
+    function toggleLog(id) {
+    const logElement = document.getElementById("log-" + id);
+    if (!logElement) return;
+
+    if (logElement.style.display === "none" || logElement.style.display === "") {
+    logElement.style.display = "block";
+    } else {
+    logElement.style.display = "none";
+    }
+    }
+
+    function filterTable() {
+    const searchValue = document.getElementById("searchInput").value.toLowerCase();
+    const statusValue = document.getElementById("statusFilter").value;
+    const environmentValue = document.getElementById("environmentFilter").value;
+    const rows = document.querySelectorAll(".result-row");
+
+    rows.forEach(row => {
+    const script = row.getAttribute("data-script");
+    const status = row.getAttribute("data-status");
+    const environment = row.getAttribute("data-environment");
+
+    const matchesSearch = script.includes(searchValue);
+    const matchesStatus = statusValue === "" || status === statusValue;
+    const matchesEnvironment = environmentValue === "" || environment === environmentValue;
+
+    row.style.display = (matchesSearch && matchesStatus && matchesEnvironment) ? "" : "none";
+    });
+    }
+
+    function sortTable() {
+    const tbody = document.getElementById("resultsBody");
+    const rows = Array.from(document.querySelectorAll(".result-row"));
+    const sortValue = document.getElementById("sortDate").value;
+
+    rows.sort((a, b) => {
+    const dateA = parseInt(a.getAttribute("data-date"));
+    const dateB = parseInt(b.getAttribute("data-date"));
+    return sortValue === "asc" ? dateA - dateB : dateB - dateA;
+    });
+
+    rows.forEach(row => tbody.appendChild(row));
+    }
+
+    function resetFilters() {
+    document.getElementById("searchInput").value = "";
+    document.getElementById("statusFilter").value = "";
+    document.getElementById("environmentFilter").value = "";
+    document.getElementById("sortDate").value = "desc";
+    filterTable();
+    sortTable();<th>Screenshots</th>
+    <th>Defect</th>
+    }
+
+    document.getElementById("searchInput").addEventListener("input", filterTable);
+    document.getElementById("statusFilter").addEventListener("change", filterTable);
+    document.getElementById("environmentFilter").addEventListener("change", filterTable);
+    document.getElementById("sortDate").addEventListener("change", sortTable);
+
+    setInterval(async () => {
+    try {
+    const response = await fetch('/Dashboard/GetResultsPartial');
+    const html = await response.text();
+
+    document.getElementById("resultsBody").innerHTML = html;
+
+    filterTable();
+    sortTable();
+    } catch (e) {
+    console.error("Refresh error", e);
+    }
+    }, 10000);
+</script>

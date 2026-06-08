@@ -1,0 +1,63 @@
+﻿@using TestAutomationPlatform.Models
+@model TestAutomationPlatform.Models.Defect
+
+<h1>Defectdetails</h1>
+
+<div class="card">
+    <div class="card-body">
+        <p><strong>Titel:</strong> @Model.Title</p>
+        <p><strong>Beschrijving:</strong> @Model.Description</p>
+        <p><strong>Status:</strong> @Model.Status</p>
+        <p><strong>Prioriteit:</strong> @Model.Priority</p>
+        <p><strong>Aangemaakt op:</strong> @Model.CreatedAt.ToString("dd-MM-yyyy HH:mm")</p>
+
+        @if (Model.UpdatedAt != null)
+        {
+            <p><strong>Laatst bijgewerkt:</strong> @Model.UpdatedAt.Value.ToString("dd-MM-yyyy HH:mm")</p>
+        }
+
+        <hr />
+
+        <h4>Gekoppeld testresultaat</h4>
+
+        <p><strong>Resultaat ID:</strong> @Model.RunResultId</p>
+        <p><strong>Script ID:</strong> @Model.RunResult.ScriptId</p>
+        <p><strong>Status:</strong> @Model.RunResult.Status</p>
+        <p><strong>Omgeving:</strong> @Model.RunResult.Environment</p>
+        <p><strong>Uitvoeringstijd:</strong> @Model.RunResult.ExecutionTime sec</p>
+        <p><strong>Uitgevoerd op:</strong> @Model.RunResult.ExecutedAt.ToString("dd-MM-yyyy HH:mm")</p>
+
+        <p><strong>Log / foutinformatie:</strong></p>
+        <pre>@Model.RunResult.Log</pre>
+
+        @if (!string.IsNullOrWhiteSpace(Model.RunResult.ScreenshotPath))
+        {
+            <p><strong>Screenshot:</strong></p>
+            <img src="@Model.RunResult.ScreenshotPath" class="img-fluid" alt="Screenshot van testresultaat" />
+        }
+    </div>
+</div>
+
+<form asp-action="UpdateStatus" method="post" class="mt-3">
+    <input type="hidden" name="id" value="@Model.Id" />
+
+    <div class="mb-3">
+        <label class="form-label">Status wijzigen</label>
+        <select name="status" class="form-control">
+            @foreach (var status in Enum.GetValues(typeof(DefectStatus)))
+            {
+                <option value="@status" selected="@(Model.Status.Equals(status))">
+                    @status
+                </option>
+            }
+        </select>
+    </div>
+
+    <button type="submit" class="btn btn-primary">
+        Status opslaan
+    </button>
+
+    <a asp-controller="Defect" asp-action="Index" class="btn btn-secondary">
+        Terug naar defectenoverzicht
+    </a>
+</form>

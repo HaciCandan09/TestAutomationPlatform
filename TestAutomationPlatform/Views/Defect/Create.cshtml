@@ -1,0 +1,43 @@
+﻿@using TestAutomationPlatform.Models
+@model TestAutomationPlatform.Models.Defect
+
+<h1>Defect aanmaken</h1>
+
+<form asp-action="Create" method="post">
+    <input type="hidden" name="runResultId" value="@Model.RunResultId" />
+
+    <div class="mb-3">
+        <label class="form-label">Titel</label>
+        <input name="title" class="form-control" value="@Model.Title" />
+        <span class="text-danger">@Html.ValidationMessage("Title")</span>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Beschrijving</label>
+        <textarea name="description" class="form-control">@Model.Description</textarea>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Prioriteit</label>
+        <select name="priority" class="form-control">
+            @foreach (DefectPriority priority in Enum.GetValues(typeof(DefectPriority)))
+            {
+                <option value="@priority" selected="@(Model.Priority == priority)">
+                    @priority
+                </option>
+            }
+        </select>
+    </div>
+
+    <div class="text-danger">
+        @Html.ValidationSummary()
+    </div>
+
+    <button type="submit" class="btn btn-danger">
+        Defect opslaan
+    </button>
+
+    <a asp-controller="Dashboard" asp-action="Index" class="btn btn-secondary">
+        Annuleren
+    </a>
+</form>

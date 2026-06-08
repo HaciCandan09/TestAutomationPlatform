@@ -1,0 +1,189 @@
+﻿@model TestAutomationPlatform.Models.TestStructureViewModel
+
+@{
+    ViewData["Title"] = "Teststructuur";
+}
+
+<div class="container mt-4">
+    <h2>Teststructuur</h2>
+    <p class="text-muted">
+        Beheer categorieën en test-suites en koppel deze aan een workspace.
+    </p>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Sluiten"></button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Sluiten"></button>
+        </div>
+    }
+
+    @if (!Model.Workspaces.Any())
+    {
+        <div class="alert alert-warning">
+            Er zijn nog geen workspaces aangemaakt. Maak eerst een workspace aan voordat je categorieën of test-suites toevoegt.
+        </div>
+    }
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Categorie aanmaken</h5>
+
+                    <form asp-action="CreateCategory" method="post">
+                        @Html.AntiForgeryToken()
+
+                        <div class="mb-3">
+                            <label class="form-label">Categorienaam</label>
+                            <input asp-for="NewCategoryName" class="form-control" placeholder="Bijv. Smoke Tests" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Workspace</label>
+                            <select asp-for="CategoryWorkspaceId" asp-items="Model.Workspaces" class="form-select">
+                                <option value="">Selecteer workspace</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary" disabled="@(!Model.Workspaces.Any())">
+                            Categorie opslaan
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Test-suite aanmaken</h5>
+
+                    <form asp-action="CreateTestSuite" method="post">
+                        @Html.AntiForgeryToken()
+
+                        <div class="mb-3">
+                            <label class="form-label">Test-suite naam</label>
+                            <input asp-for="NewTestSuiteName" class="form-control" placeholder="Bijv. Login Suite" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Workspace</label>
+                            <select asp-for="TestSuiteWorkspaceId" asp-items="Model.Workspaces" class="form-select">
+                                <option value="">Selecteer workspace</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary" disabled="@(!Model.Workspaces.Any())">
+                            Test-suite opslaan
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">Categorieën</h5>
+
+                    @if (!Model.Categories.Any())
+                    {
+                        <div class="alert alert-info">
+                            Er zijn nog geen categorieën aangemaakt.
+                        </div>
+                    }
+                    else
+                    {
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Naam</th>
+                                    <th>Workspace</th>
+                                    <th>Actie</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var category in Model.Categories)
+                                {
+                                    <tr>
+                                        <td>@category.Name</td>
+                                        <td>@category.Workspace.Name</td>
+                                        <td>
+                                            <form asp-action="DeleteCategory" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@category.Id" />
+
+                                                <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                        onclick="return confirm('Weet je zeker dat je deze categorie wilt verwijderen?');">
+                                                    Verwijderen
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">Test-suites</h5>
+
+                    @if (!Model.TestSuites.Any())
+                    {
+                        <div class="alert alert-info">
+                            Er zijn nog geen test-suites aangemaakt.
+                        </div>
+                    }
+                    else
+                    {
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Naam</th>
+                                    <th>Workspace</th>
+                                    <th>Actie</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var testSuite in Model.TestSuites)
+                                {
+                                    <tr>
+                                        <td>@testSuite.Name</td>
+                                        <td>@testSuite.Workspace.Name</td>
+                                        <td>
+                                            <form asp-action="DeleteTestSuite" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@testSuite.Id" />
+
+                                                <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                        onclick="return confirm('Weet je zeker dat je deze test-suite wilt verwijderen?');">
+                                                    Verwijderen
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
