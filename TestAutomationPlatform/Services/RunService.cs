@@ -85,6 +85,11 @@ public class RunService
         run.Status = result.status == "Fail" ? "Completed with failures" : "Completed";
         await _context.SaveChangesAsync();
     }
+    //scheduled hangfire scripts execution
+    public async Task ExecuteScheduledScript(int scriptId, string environment)
+    {
+        await ExecuteRunByScriptId(scriptId, environment);
+    }
 
     private async Task<(string status, string log, double time,string screenshotPath)> ExecuteSingleScript(Script script, string environment)
     {

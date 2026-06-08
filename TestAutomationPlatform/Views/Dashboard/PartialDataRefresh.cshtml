@@ -35,21 +35,23 @@
         <td>@item.ExecutedAt.ToString("dd-MM-yyyy HH:mm:ss")</td>
 
         <td style="min-width:220px;">
-            <button class="btn btn-sm btn-outline-dark mb-2" type="button" onclick="toggleLog(@item.Id)">
+            <button class="btn btn-sm btn-outline-dark mb-2 js-toggle-log"
+                    type="button"
+                    data-log-id="@item.Id">
                 Toon / Verberg log
             </button>
 
-            <div id="log-@item.Id" style="display:none;">
+            <div id="log-@item.Id" class="run-log" style="display:none;">
                 <pre class="bg-light p-2 rounded border mb-0" style="white-space: pre-wrap; font-size: 13px;">@item.Log</pre>
             </div>
         </td>
 
         <td>
-            @if (!string.IsNullOrEmpty(item.ScreenshotPath))
+            @if (!string.IsNullOrWhiteSpace(item.ScreenshotPath))
             {
                 <button type="button"
-                        class="btn btn-sm btn-info"
-                        onclick="openScreenshotModal('@item.ScreenshotPath')">
+                        class="btn btn-sm btn-info js-open-screenshot"
+                        data-screenshot-path="@item.ScreenshotPath">
                     Bekijk
                 </button>
             }

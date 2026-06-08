@@ -48,19 +48,9 @@
                     <span asp-validation-for="CategoryId" class="text-danger"></span>
                 </div>
 
-                <div class="mb-3">
-                    <label asp-for="Code" class="form-label">Script JSON</label>
-                    <textarea asp-for="Code"
-                              class="form-control"
-                              rows="12"
-                              placeholder="Voer hier de JSON-stappen van het script in"></textarea>
-                    <span asp-validation-for="Code" class="text-danger"></span>
-                    <small class="text-muted">
-                        Gebruik acties zoals goto, click, fill, wait, asserttitle en assertelement.
-                    </small>
-                </div>
+                <partial name="_StepBuilder" model="Model" />
 
-                <div class="d-flex gap-2">
+                <div class="d-flex gap-2 mt-4">
                     <button type="submit" class="btn btn-warning">
                         <i class="bi bi-save"></i> Opslaan
                     </button>

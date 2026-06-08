@@ -23,7 +23,6 @@ public class TestExecutionService
         var screenshotsPath = Path.Combine(basePath, "Screenshots");
         Directory.CreateDirectory(screenshotsPath);
 
-        
         var folderName = $"run_{DateTime.Now.Ticks}";
         var runFolder = Path.Combine(screenshotsPath, folderName);
         Directory.CreateDirectory(runFolder);
@@ -38,12 +37,25 @@ public class TestExecutionService
 
             using var playwright = await Playwright.CreateAsync();
 
-            browser = await playwright.Chromium.LaunchAsync(new()
+            browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
             {
-                Headless = true
+                Headless = true,
+                Args = new[]
+                {
+                    "--disable-gpu",
+                    "--disable-dev-shm-usage",
+                    "--no-sandbox"
+                }
             });
 
-            page = await browser.NewPageAsync();
+            page = await browser.NewPageAsync(new BrowserNewPageOptions
+            {
+                ViewportSize = new ViewportSize
+                {
+                    Width = 1366,
+                    Height = 768
+                }
+            });
 
             int stepIndex = 0;
 
@@ -64,7 +76,14 @@ public class TestExecutionService
                         if (string.IsNullOrWhiteSpace(step.Value))
                             throw new Exception($"Stap {stepIndex}: Value ontbreekt voor goto.");
 
-                        await page.GotoAsync(step.Value);
+                        await page.GotoAsync(step.Value, new PageGotoOptions
+                        {
+                            WaitUntil = WaitUntilState.Load,
+                            Timeout = 30000
+                        });
+
+                        await page.WaitForTimeoutAsync(1000);
+
                         log.AppendLine($"[{DateTime.Now}] Navigated to {step.Value}");
 
                         await SafeScreenshot(page, runFolder, $"step_{stepIndex}_goto.png");
@@ -74,7 +93,16 @@ public class TestExecutionService
                         if (string.IsNullOrWhiteSpace(step.Selector))
                             throw new Exception($"Stap {stepIndex}: Selector ontbreekt voor click.");
 
+                        await page.Locator(step.Selector).WaitForAsync(new LocatorWaitForOptions
+                        {
+                            State = WaitForSelectorState.Visible,
+                            Timeout = 10000
+                        });
+
                         await page.ClickAsync(step.Selector);
+
+                        await page.WaitForTimeoutAsync(500);
+
                         log.AppendLine($"[{DateTime.Now}] Clicked {step.Selector}");
 
                         await SafeScreenshot(page, runFolder, $"step_{stepIndex}_click.png");
@@ -87,7 +115,16 @@ public class TestExecutionService
                         if (step.Value == null)
                             throw new Exception($"Stap {stepIndex}: Value ontbreekt voor fill.");
 
+                        await page.Locator(step.Selector).WaitForAsync(new LocatorWaitForOptions
+                        {
+                            State = WaitForSelectorState.Visible,
+                            Timeout = 10000
+                        });
+
                         await page.FillAsync(step.Selector, step.Value);
+
+                        await page.WaitForTimeoutAsync(500);
+
                         log.AppendLine($"[{DateTime.Now}] Filled {step.Selector}");
 
                         await SafeScreenshot(page, runFolder, $"step_{stepIndex}_fill.png");
@@ -100,24 +137,19 @@ public class TestExecutionService
                         if (string.IsNullOrWhiteSpace(step.Value))
                             throw new Exception($"Stap {stepIndex}: Value ontbreekt voor press.");
 
+                        await page.Locator(step.Selector).WaitForAsync(new LocatorWaitForOptions
+                        {
+                            State = WaitForSelectorState.Visible,
+                            Timeout = 10000
+                        });
+
                         await page.PressAsync(step.Selector, step.Value);
+
+                        await page.WaitForTimeoutAsync(1500);
+
                         log.AppendLine($"[{DateTime.Now}] Pressed {step.Value} on {step.Selector}");
 
                         await SafeScreenshot(page, runFolder, $"step_{stepIndex}_press.png");
-                        break;
-
-                    case "asserttitle":
-                        if (string.IsNullOrWhiteSpace(step.Value))
-                            throw new Exception($"Stap {stepIndex}: Value ontbreekt voor asserttitle.");
-
-                        var title = await page.TitleAsync();
-
-                        if (!title.Contains(step.Value))
-                            throw new Exception($"Title mismatch: {title}");
-
-                        log.AppendLine($"[{DateTime.Now}] Title assertion passed: {step.Value}");
-
-                        await SafeScreenshot(page, runFolder, $"step_{stepIndex}_asserttitle.png");
                         break;
 
                     case "wait":
@@ -127,23 +159,69 @@ public class TestExecutionService
                         if (!int.TryParse(step.Value, out int waitMs))
                             throw new Exception($"Stap {stepIndex}: Wait value ongeldig.");
 
-                        await Task.Delay(waitMs);
+                        await page.WaitForTimeoutAsync(waitMs);
+
                         log.AppendLine($"[{DateTime.Now}] Waited {waitMs} ms");
 
                         await SafeScreenshot(page, runFolder, $"step_{stepIndex}_wait.png");
                         break;
 
+                    case "waitforselector":
+                        if (string.IsNullOrWhiteSpace(step.Selector))
+                            throw new Exception($"Stap {stepIndex}: Selector ontbreekt voor waitforselector.");
+
+                        await page.Locator(step.Selector).WaitForAsync(new LocatorWaitForOptions
+                        {
+                            State = WaitForSelectorState.Visible,
+                            Timeout = step.Timeout > 0 ? step.Timeout : 10000
+                        });
+
+                        log.AppendLine($"[{DateTime.Now}] Waited for selector {step.Selector}");
+
+                        await SafeScreenshot(page, runFolder, $"step_{stepIndex}_waitforselector.png");
+                        break;
+
+                    case "asserttitle":
+                        if (string.IsNullOrWhiteSpace(step.Value))
+                            throw new Exception($"Stap {stepIndex}: Value ontbreekt voor asserttitle.");
+
+                        var title = await page.TitleAsync();
+
+                        if (!title.Contains(step.Value, StringComparison.OrdinalIgnoreCase))
+                            throw new Exception($"Title mismatch. Verwacht: {step.Value}, gevonden: {title}");
+
+                        log.AppendLine($"[{DateTime.Now}] Title assertion passed: {step.Value}");
+
+                        await SafeScreenshot(page, runFolder, $"step_{stepIndex}_asserttitle.png");
+                        break;
+
+                    case "asserttext":
+                        if (string.IsNullOrWhiteSpace(step.Selector))
+                            throw new Exception($"Stap {stepIndex}: Selector ontbreekt voor asserttext.");
+
+                        if (string.IsNullOrWhiteSpace(step.Value))
+                            throw new Exception($"Stap {stepIndex}: Value ontbreekt voor asserttext.");
+
+                        var textContent = await page.Locator(step.Selector).TextContentAsync();
+
+                        if (textContent == null || !textContent.Contains(step.Value, StringComparison.OrdinalIgnoreCase))
+                            throw new Exception($"Tekst niet gevonden. Verwacht: {step.Value}");
+
+                        log.AppendLine($"[{DateTime.Now}] Text assertion passed: {step.Value}");
+
+                        await SafeScreenshot(page, runFolder, $"step_{stepIndex}_asserttext.png");
+                        break;
+
                     case "assertelement":
                         if (string.IsNullOrWhiteSpace(step.Selector))
-                            throw new Exception($"Stap {stepIndex}: Selector ontbreekt.");
+                            throw new Exception($"Stap {stepIndex}: Selector ontbreekt voor assertelement.");
 
                         var locator = page.Locator(step.Selector);
-
                         var state = step.Value?.ToLower() ?? "visible";
 
                         if (state == "hidden")
                         {
-                            await locator.WaitForAsync(new()
+                            await locator.WaitForAsync(new LocatorWaitForOptions
                             {
                                 State = WaitForSelectorState.Hidden,
                                 Timeout = 5000
@@ -153,7 +231,7 @@ public class TestExecutionService
                         }
                         else
                         {
-                            await locator.WaitForAsync(new()
+                            await locator.WaitForAsync(new LocatorWaitForOptions
                             {
                                 State = WaitForSelectorState.Visible,
                                 Timeout = 5000
@@ -163,6 +241,12 @@ public class TestExecutionService
                         }
 
                         await SafeScreenshot(page, runFolder, $"step_{stepIndex}_assertelement.png");
+                        break;
+
+                    case "screenshot":
+                        await SafeScreenshot(page, runFolder, $"step_{stepIndex}_screenshot.png");
+
+                        log.AppendLine($"[{DateTime.Now}] Screenshot gemaakt");
                         break;
 
                     default:
@@ -200,9 +284,12 @@ public class TestExecutionService
         {
             var fullPath = Path.Combine(folder, fileName);
 
-            await page.ScreenshotAsync(new()
+            await page.WaitForTimeoutAsync(1000);
+
+            await page.ScreenshotAsync(new PageScreenshotOptions
             {
-                Path = fullPath
+                Path = fullPath,
+                FullPage = true
             });
 
             Console.WriteLine($"Screenshot opgeslagen: {fullPath}");

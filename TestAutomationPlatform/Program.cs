@@ -76,25 +76,25 @@ app.MapControllerRoute(
 
 
 
+//oude hangfire code nog ff bewaren denk ik
+//BackgroundJob.Enqueue<RunService>(x => x.ExecuteRun("Dev"));
 
-BackgroundJob.Enqueue<RunService>(x => x.ExecuteRun("Dev"));
+//RecurringJob.AddOrUpdate<RunService>(
+//    "run-tests-dev",
+//    x => x.ExecuteRun("Dev"),
+//    Cron.MinuteInterval(5)
+//);
 
-RecurringJob.AddOrUpdate<RunService>(
-    "run-tests-dev",
-    x => x.ExecuteRun("Dev"),
-    Cron.MinuteInterval(5)
-);
+//RecurringJob.AddOrUpdate<RunService>(
+//    "run-tests-preprod",
+//    x => x.ExecuteRun("Preprod"),
+//    Cron.HourInterval(1)
+//);
 
-RecurringJob.AddOrUpdate<RunService>(
-    "run-tests-preprod",
-    x => x.ExecuteRun("Preprod"),
-    Cron.HourInterval(1)
-);
-
-RecurringJob.AddOrUpdate<RunService>(
-    "run-tests-prod",
-    x => x.ExecuteRun("Prod"),
-    Cron.Daily()
-);
+//RecurringJob.AddOrUpdate<RunService>(
+//    "run-tests-prod",
+//    x => x.ExecuteRun("Prod"),
+//    Cron.Daily()
+//);
 
 app.Run();

@@ -15,6 +15,8 @@ namespace TestAutomationPlatform.Data
 
         public DbSet<Defect> Defects { get; set; }
 
+        public DbSet<ScheduledRun> ScheduledRuns { get; set; }
+
         public AppDbContext(DbContextOptions<AppDbContext> options)
             : base(options)
         {
@@ -38,6 +40,13 @@ namespace TestAutomationPlatform.Data
                 .HasMany(w => w.Scripts)
                 .WithOne(s => s.Workspace)
                 .HasForeignKey(s => s.WorkspaceId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            //hangfire
+            modelBuilder.Entity<ScheduledRun>()
+                .HasOne(sr => sr.Script)
+                .WithMany()
+                .HasForeignKey(sr => sr.ScriptId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             //Testsuite

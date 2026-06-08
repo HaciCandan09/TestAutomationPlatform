@@ -33,6 +33,8 @@
         </div>
 
         <form method="post" asp-controller="Run" asp-action="StartRun" class="d-flex gap-2">
+            @Html.AntiForgeryToken()
+
             <select name="environment" class="form-select" style="max-width: 200px;">
                 <option value="Dev">Development</option>
                 <option value="Preprod">Pre-Production</option>
@@ -139,7 +141,7 @@
                 </div>
 
                 <div class="col-md-2">
-                    <button type="button" class="btn btn-outline-secondary w-100" onclick="resetFilters()">
+                    <button type="button" class="btn btn-outline-secondary w-100" id="resetFiltersButton">
                         Reset
                     </button>
                 </div>
@@ -178,7 +180,7 @@
                     </table>
                 </div>
 
-                <div class="text-muted mt-3">
+                <div class="text-muted mt-3" id="lastUpdateText">
                     Laatste update: @DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss")
                 </div>
             }
@@ -190,8 +192,8 @@
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Screenshots</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title" id="screenshotModalLabel">Screenshots</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Sluiten"></button>
             </div>
             <div class="modal-body" id="screenshotModalBody">
                 <div class="text-muted">Laden...</div>
@@ -200,48 +202,18 @@
     </div>
 </div>
 
+<div id="fullscreenOverlay"
+     style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:9999; align-items:center; justify-content:center;"
+     onclick="closeFullscreen()">
+    <img id="fullscreenImage"
+         src=""
+         alt="Screenshot fullscreen"
+         style="max-width:95%; max-height:95%; border-radius:8px;" />
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
-    function openFullscreen(src) {
-    const overlay = document.getElementById("fullscreenOverlay");
-    const img = document.getElementById("fullscreenImage");
-
-    if (!overlay || !img) return;
-
-    img.src = src;
-    overlay.style.display = "flex";
-    }
-
-    function closeFullscreen() {
-    const overlay = document.getElementById("fullscreenOverlay");
-    if (overlay) {
-    overlay.style.display = "none";
-    }
-    }
-
-    document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape") {
-    closeFullscreen();
-    }
-    });
-
-    async function openScreenshotModal(path) {
-    const modalBody = document.getElementById("screenshotModalBody");
-    modalBody.innerHTML = '<div class="text-muted">Laden...</div>';
-
-    try {
-    const response = await fetch(`/Screenshots/RunImages?path=${encodeURIComponent(path)}`);
-    const html = await response.text();
-    modalBody.innerHTML = html;
-
-    const modal = new bootstrap.Modal(document.getElementById('screenshotModal'));
-    modal.show();
-    } catch (error) {
-    modalBody.innerHTML = '<div class="alert alert-danger">Kon screenshots niet laden.</div>';
-    }
-    }
-
     const statusLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(statusLabels));
     const statusData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(statusData));
 
@@ -277,7 +249,7 @@
     datasets: [{
     label: 'Aantal runs',
     data: scriptData,
-    backgroundColor: '#0d6efd',
+    backgroundColor: '#76b82a',
     borderWidth: 1
     }]
     },
@@ -299,27 +271,46 @@
     }
     });
 
-    function toggleLog(id) {
-    const logElement = document.getElementById("log-" + id);
-    if (!logElement) return;
+    function openFullscreen(src) {
+    const overlay = document.getElementById("fullscreenOverlay");
+    const img = document.getElementById("fullscreenImage");
 
-    if (logElement.style.display === "none" || logElement.style.display === "") {
-    logElement.style.display = "block";
-    } else {
-    logElement.style.display = "none";
+    if (!overlay || !img) return;
+
+    img.src = src;
+    overlay.style.display = "flex";
+    }
+
+    function closeFullscreen() {
+    const overlay = document.getElementById("fullscreenOverlay");
+
+    if (overlay) {
+    overlay.style.display = "none";
     }
     }
+
+    document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") {
+    closeFullscreen();
+    }
+    });
 
     function filterTable() {
-    const searchValue = document.getElementById("searchInput").value.toLowerCase();
-    const statusValue = document.getElementById("statusFilter").value;
-    const environmentValue = document.getElementById("environmentFilter").value;
+    const searchInput = document.getElementById("searchInput");
+    const statusFilter = document.getElementById("statusFilter");
+    const environmentFilter = document.getElementById("environmentFilter");
+
+    if (!searchInput || !statusFilter || !environmentFilter) return;
+
+    const searchValue = searchInput.value.toLowerCase();
+    const statusValue = statusFilter.value;
+    const environmentValue = environmentFilter.value;
     const rows = document.querySelectorAll(".result-row");
 
     rows.forEach(row => {
-    const script = row.getAttribute("data-script");
-    const status = row.getAttribute("data-status");
-    const environment = row.getAttribute("data-environment");
+    const script = row.getAttribute("data-script") || "";
+    const status = row.getAttribute("data-status") || "";
+    const environment = row.getAttribute("data-environment") || "";
 
     const matchesSearch = script.includes(searchValue);
     const matchesStatus = statusValue === "" || status === statusValue;
@@ -331,12 +322,17 @@
 
     function sortTable() {
     const tbody = document.getElementById("resultsBody");
+    const sortDate = document.getElementById("sortDate");
+
+    if (!tbody || !sortDate) return;
+
     const rows = Array.from(document.querySelectorAll(".result-row"));
-    const sortValue = document.getElementById("sortDate").value;
+    const sortValue = sortDate.value;
 
     rows.sort((a, b) => {
-    const dateA = parseInt(a.getAttribute("data-date"));
-    const dateB = parseInt(b.getAttribute("data-date"));
+    const dateA = parseInt(a.getAttribute("data-date") || "0");
+    const dateB = parseInt(b.getAttribute("data-date") || "0");
+
     return sortValue === "asc" ? dateA - dateB : dateB - dateA;
     });
 
@@ -348,25 +344,96 @@
     document.getElementById("statusFilter").value = "";
     document.getElementById("environmentFilter").value = "";
     document.getElementById("sortDate").value = "desc";
+
     filterTable();
-    sortTable();<th>Screenshots</th>
-    <th>Defect</th>
+    sortTable();
     }
 
-    document.getElementById("searchInput").addEventListener("input", filterTable);
-    document.getElementById("statusFilter").addEventListener("change", filterTable);
-    document.getElementById("environmentFilter").addEventListener("change", filterTable);
-    document.getElementById("sortDate").addEventListener("change", sortTable);
+    document.addEventListener("click", async function (event) {
+    const logButton = event.target.closest(".js-toggle-log");
+
+    if (logButton) {
+    const id = logButton.getAttribute("data-log-id");
+    const logElement = document.getElementById("log-" + id);
+
+    if (!logElement) {
+    console.warn("Log element niet gevonden:", id);
+    return;
+    }
+
+    logElement.style.display =
+    (logElement.style.display === "none" || logElement.style.display === "")
+    ? "block"
+    : "none";
+
+    return;
+    }
+
+    const screenshotButton = event.target.closest(".js-open-screenshot");
+
+    if (screenshotButton) {
+    const path = screenshotButton.getAttribute("data-screenshot-path");
+    const modalBody = document.getElementById("screenshotModalBody");
+
+    if (!modalBody) {
+    console.warn("Screenshot modal body niet gevonden.");
+    return;
+    }
+
+    modalBody.innerHTML = '<div class="text-muted">Laden...</div>';
+
+    try {
+    const response = await fetch(`/Screenshots/RunImages?path=${encodeURIComponent(path)}`);
+
+    if (!response.ok) {
+    throw new Error("Screenshots konden niet worden geladen.");
+    }
+
+    const html = await response.text();
+    modalBody.innerHTML = html;
+
+    const modalElement = document.getElementById("screenshotModal");
+
+    if (!modalElement) {
+    console.warn("Screenshot modal niet gevonden.");
+    return;
+    }
+
+    const modal = new bootstrap.Modal(modalElement);
+    modal.show();
+    } catch (error) {
+    console.error(error);
+    modalBody.innerHTML = '<div class="alert alert-danger">Kon screenshots niet laden.</div>';
+    }
+    }
+    });
+
+    document.getElementById("searchInput")?.addEventListener("input", filterTable);
+    document.getElementById("statusFilter")?.addEventListener("change", filterTable);
+    document.getElementById("environmentFilter")?.addEventListener("change", filterTable);
+    document.getElementById("sortDate")?.addEventListener("change", sortTable);
+    document.getElementById("resetFiltersButton")?.addEventListener("click", resetFilters);
 
     setInterval(async () => {
     try {
     const response = await fetch('/Dashboard/GetResultsPartial');
+
+    if (!response.ok) {
+    throw new Error("Partial refresh mislukt.");
+    }
+
     const html = await response.text();
 
     document.getElementById("resultsBody").innerHTML = html;
 
     filterTable();
     sortTable();
+
+    const lastUpdateText = document.getElementById("lastUpdateText");
+
+    if (lastUpdateText) {
+    lastUpdateText.innerText = "Laatste update: " + new Date().toLocaleString("nl-NL");
+    }
     } catch (e) {
     console.error("Refresh error", e);
     }
