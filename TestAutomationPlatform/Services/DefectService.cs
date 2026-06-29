@@ -7,10 +7,14 @@ namespace TestAutomationPlatform.Services
     public class DefectService : IDefectService
     {
         private readonly AppDbContext _context;
+        private readonly ExternalDefectApiClient _externalDefectApiClient;
 
-        public DefectService(AppDbContext context)
+        public DefectService(
+            AppDbContext context,
+            ExternalDefectApiClient externalDefectApiClient)
         {
             _context = context;
+            _externalDefectApiClient = externalDefectApiClient;
         }
 
         public async Task<List<Defect>> GetAllAsync()
@@ -42,8 +46,8 @@ namespace TestAutomationPlatform.Services
                 throw new Exception("Testresultaat niet gevonden.");
 
             if (!result.Status.Equals("Fail", StringComparison.OrdinalIgnoreCase) &&
-     !result.Status.Equals("Failed", StringComparison.OrdinalIgnoreCase) &&
-     !result.Status.Equals("Error", StringComparison.OrdinalIgnoreCase))
+                !result.Status.Equals("Failed", StringComparison.OrdinalIgnoreCase) &&
+                !result.Status.Equals("Error", StringComparison.OrdinalIgnoreCase))
             {
                 throw new Exception("Een defect kan alleen worden aangemaakt bij een gefaald testresultaat.");
             }
@@ -61,8 +65,20 @@ namespace TestAutomationPlatform.Services
                 CreatedAt = DateTime.Now
             };
 
+            // Eerst lokaal opslaan in je eigen database
             _context.Defects.Add(defect);
             await _context.SaveChangesAsync();
+
+            // Daarna doorsturen naar de externe Swagger API
+            try
+            {
+                await _externalDefectApiClient.AddDefectAsync(defect);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Defect lokaal opgeslagen, maar niet doorgestuurd naar externe API.");
+                Console.WriteLine(ex.Message);
+            }
 
             return defect;
         }

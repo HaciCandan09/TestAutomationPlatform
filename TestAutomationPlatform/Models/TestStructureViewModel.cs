@@ -13,5 +13,11 @@ public class TestStructureViewModel
     public int CategoryWorkspaceId { get; set; }
 
     public string NewTestSuiteName { get; set; } = string.Empty;
-    public int TestSuiteWorkspaceId { get; set; }
+    public int TestSuiteCategoryId { get; set; }
+
+    public int? SelectedWorkspaceId { get; set; }
+
+    public string? SelectedWorkspaceName { get; set; }
+
+    public List<SelectListItem> CategoryOptions { get; set; } = new();
 }

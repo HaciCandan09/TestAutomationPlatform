@@ -7,108 +7,177 @@
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2 class="mb-1">Script Management</h2>
-            <p class="text-muted mb-0">Beheer en run je testscripts</p>
+            <h2 class="mb-1">Scripts</h2>
+
+            @if (ViewBag.TestSuiteId != null)
+            {
+                <p class="text-muted mb-0">
+                    @ViewBag.WorkspaceName /
+                    @ViewBag.CategoryName /
+                    @ViewBag.TestSuiteName
+                </p>
+            }
+            else
+            {
+                <p class="text-muted mb-0">
+                    Open eerst een test-suite via Teststructuur.
+                </p>
+            }
         </div>
 
-        <a asp-controller="ScriptsForm" asp-action="Create" class="btn btn-primary">
-            <i class="bi bi-plus-lg"></i> Nieuw Script
-        </a>
+        @if (ViewBag.TestSuiteId != null)
+        {
+            <a asp-controller="ScriptsForm"
+               asp-action="Create"
+               asp-route-testSuiteId="@ViewBag.TestSuiteId"
+               class="btn btn-primary">
+                <i class="bi bi-plus-lg"></i>
+                Nieuw Script
+            </a>
+        }
+        else
+        {
+            <a asp-controller="TestStructure"
+               asp-action="Index"
+               class="btn btn-outline-primary">
+                Naar Teststructuur
+            </a>
+        }
     </div>
 
     @if (TempData["Message"] != null)
     {
-        <div class="alert alert-success">
+        <div class="alert alert-success alert-dismissible fade show">
             @TempData["Message"]
+
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert">
+            </button>
         </div>
     }
 
-    <div class="card shadow-sm border-0">
-        <div class="card-body">
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            @TempData["ErrorMessage"]
 
-            @if (!Model.Any())
-            {
-                <div class="alert alert-info mb-0">
-                    Er zijn nog geen scripts beschikbaar.
-                </div>
-            }
-            else
-            {
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Naam</th>
-                                <th>Workspace</th>
-                                <th>Suite</th>
-                                <th>Categorie</th>
-                                <th>Aangemaakt op</th>
-                                <th>Code</th>
-                                <th>Acties</th>
-                            </tr>
-                        </thead>
-
-                        <tbody>
-                            @foreach (var script in Model)
-                            {
-                                <tr>
-                                    <td class="fw-semibold">@script.Name</td>
-
-                                    <td>@script.Workspace?.Name</td>
-                                    <td>@script.TestSuite?.Name</td>
-                                    <td>@script.Category?.Name</td>
-
-                                    <td>
-                                        @script.CreatedAt.ToString("dd-MM-yyyy HH:mm:ss")
-                                    </td>
-
-                                    <td style="max-width:300px;">
-                                        <pre class="bg-light p-2 rounded border mb-0"
-                                             style="white-space: pre-wrap; font-size: 12px; max-height:120px; overflow-y:auto;">
-                                            @script.Code
-                                        </pre>
-                                    </td>
-
-                                    <td class="d-flex gap-2">
-
-                                        <!-- RUN knop -->
-                                        <form asp-action="Run" method="post">
-                                            @Html.AntiForgeryToken()
-                                            <input type="hidden" name="id" value="@script.Id" />
-
-                                            <button class="btn btn-success btn-sm">
-                                                <i class="bi bi-play-fill"></i>
-                                            </button>
-                                        </form>
-
-                                        <!-- EDIT knop -->
-                                        <a asp-action="Edit"
-                                               asp-route-id="@script.Id"
-                                               class="btn btn-warning btn-sm">
-                                            <i class="bi bi-pencil-fill"></i>
-                                        </a>
-
-                                        <!-- DELETE knop -->
-                                        <form asp-action="Delete"
-                                              method="post"
-                                              onsubmit="return confirm('Weet je zeker dat je dit script wilt verwijderen?');">
-                                            @Html.AntiForgeryToken()
-                                            <input type="hidden" name="id" value="@script.Id" />
-
-                                            <button class="btn btn-danger btn-sm">
-                                                <i class="bi bi-trash-fill"></i>
-                                            </button>
-                                        </form>
-
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-
-                    </table>
-                </div>
-            }
-
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert">
+            </button>
         </div>
-    </div>
+    }
+
+    @if (ViewBag.TestSuiteId == null)
+    {
+        <div class="alert alert-warning">
+            Scripts moeten vanuit een test-suite worden geopend.
+        </div>
+    }
+    else
+    {
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                @if (!Model.Any())
+                {
+                    <div class="alert alert-info mb-0">
+                        Deze test-suite bevat nog geen scripts.
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Naam</th>
+                                    <th>Workspace</th>
+                                    <th>Categorie</th>
+                                    <th>Test-suite</th>
+                                    <th>Aangemaakt</th>
+                                    <th>Code</th>
+                                    <th>Acties</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                @foreach (var script in Model)
+                                {
+                                    <tr>
+                                        <td class="fw-semibold">
+                                            @script.Name
+                                        </td>
+
+                                        <td>@script.Workspace?.Name</td>
+                                        <td>@script.Category?.Name</td>
+                                        <td>@script.TestSuite?.Name</td>
+
+                                        <td>
+                                            @script.CreatedAt.ToString("dd-MM-yyyy HH:mm:ss")
+                                        </td>
+
+                                        <td style="max-width:300px;">
+                                            <pre class="bg-light p-2 rounded border mb-0"
+                                                 style="white-space:pre-wrap; font-size:12px; max-height:120px; overflow-y:auto;">@script.Code</pre>
+                                        </td>
+
+                                        <td>
+                                            <div class="d-flex gap-2">
+                                                <form asp-action="Run" method="post">
+                                                    @Html.AntiForgeryToken()
+
+                                                    <input type="hidden"
+                                                           name="id"
+                                                           value="@script.Id" />
+
+                                                    <input type="hidden"
+                                                           name="testSuiteId"
+                                                           value="@ViewBag.TestSuiteId" />
+
+                                                    <button type="submit"
+                                                            class="btn btn-success btn-sm"
+                                                            title="Uitvoeren">
+                                                        <i class="bi bi-play-fill"></i>
+                                                    </button>
+                                                </form>
+
+                                                <a asp-action="Edit"
+                                                   asp-route-id="@script.Id"
+                                                   asp-route-testSuiteId="@ViewBag.TestSuiteId"
+                                                   class="btn btn-warning btn-sm"
+                                                   title="Bewerken">
+                                                    <i class="bi bi-pencil-fill"></i>
+                                                </a>
+
+                                                <form asp-action="Delete"
+                                                      method="post"
+                                                      onsubmit="return confirm('Weet je zeker dat je dit script wilt verwijderen?');">
+                                                    @Html.AntiForgeryToken()
+
+                                                    <input type="hidden"
+                                                           name="id"
+                                                           value="@script.Id" />
+
+                                                    <input type="hidden"
+                                                           name="testSuiteId"
+                                                           value="@ViewBag.TestSuiteId" />
+
+                                                    <button type="submit"
+                                                            class="btn btn-danger btn-sm"
+                                                            title="Verwijderen">
+                                                        <i class="bi bi-trash-fill"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    }
 </div>

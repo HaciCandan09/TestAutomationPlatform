@@ -8,6 +8,9 @@ using TestAutomationPlatform.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+//external Defect
+builder.Services.AddHttpClient<ExternalDefectApiClient>();
+
 
 // Controllers + Swagger
 builder.Services.AddControllersWithViews();

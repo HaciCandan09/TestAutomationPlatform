@@ -7,51 +7,61 @@
 <div class="container mt-4">
     <div class="mb-4">
         <h2 class="mb-1">Nieuw Script</h2>
-        <p class="text-muted mb-0">Voeg een nieuw testscript toe aan het platform</p>
+
+        <p class="text-muted mb-0">
+            @ViewBag.WorkspaceName /
+            @ViewBag.CategoryName /
+            @ViewBag.TestSuiteName
+        </p>
     </div>
 
     <div class="card shadow-sm border-0">
         <div class="card-body">
-            <form asp-controller="ScriptsForm" asp-action="Create" method="post">
+            <form asp-controller="ScriptsForm"
+                  asp-action="Create"
+                  method="post">
                 @Html.AntiForgeryToken()
 
-                <div class="mb-3">
-                    <label asp-for="Name" class="form-label">Script naam</label>
-                    <input asp-for="Name" class="form-control" placeholder="Voer een scriptnaam in" />
-                    <span asp-validation-for="Name" class="text-danger"></span>
+                @* Tijdelijk nodig totdat de oude databasevelden verwijderd zijn. *@
+                <input asp-for="WorkspaceId" type="hidden" />
+                <input asp-for="CategoryId" type="hidden" />
+                <input asp-for="TestSuiteId" type="hidden" />
+
+                <div class="mb-4">
+                    <label class="form-label">Locatie</label>
+
+                    <input type="text"
+                           class="form-control"
+                           value="@ViewBag.WorkspaceName / @ViewBag.CategoryName / @ViewBag.TestSuiteName"
+                           readonly />
                 </div>
 
                 <div class="mb-3">
-                    <label asp-for="WorkspaceId" class="form-label">Workspace</label>
-                    <select asp-for="WorkspaceId" asp-items="Model.Workspaces" class="form-select">
-                        <option value="">-- Kies een workspace --</option>
-                    </select>
-                    <span asp-validation-for="WorkspaceId" class="text-danger"></span>
-                </div>
+                    <label asp-for="Name" class="form-label">
+                        Scriptnaam
+                    </label>
 
-                <div class="mb-3">
-                    <label asp-for="TestSuiteId" class="form-label">TestSuite</label>
-                    <select asp-for="TestSuiteId" asp-items="Model.TestSuites" class="form-select">
-                        <option value="">-- Kies een testsuite --</option>
-                    </select>
-                    <span asp-validation-for="TestSuiteId" class="text-danger"></span>
-                </div>
+                    <input asp-for="Name"
+                           class="form-control"
+                           placeholder="Voer een scriptnaam in" />
 
-                <div class="mb-3">
-                    <label asp-for="CategoryId" class="form-label">Categorie</label>
-                    <select asp-for="CategoryId" asp-items="Model.Categories" class="form-select">
-                        <option value="">-- Kies een categorie --</option>
-                    </select>
-                    <span asp-validation-for="CategoryId" class="text-danger"></span>
+                    <span asp-validation-for="Name"
+                          class="text-danger">
+                    </span>
                 </div>
 
                 <partial name="_StepBuilder" model="Model" />
 
-                <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-success">
+                <div class="d-flex gap-2 mt-4">
+                    <button type="submit"
+                            class="btn btn-success">
                         Opslaan
                     </button>
-                    <a asp-controller="ScriptsForm" asp-action="Index" class="btn btn-secondary">
+
+                    <a asp-controller="ScriptsForm"
+                       asp-action="Index"
+                       asp-route-testSuiteId="@Model.TestSuiteId"
+                       class="btn btn-secondary">
                         Terug
                     </a>
                 </div>

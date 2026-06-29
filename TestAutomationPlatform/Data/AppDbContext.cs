@@ -34,7 +34,12 @@ namespace TestAutomationPlatform.Data
                 .HasForeignKey(ts => ts.WorkspaceId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-           
+            modelBuilder.Entity<Category>()
+    .HasMany(c => c.TestSuites)
+    .WithOne(ts => ts.Category)
+    .HasForeignKey(ts => ts.CategoryId)
+    .OnDelete(DeleteBehavior.Restrict);
+
             //Workspace
             modelBuilder.Entity<Workspace>()
                 .HasMany(w => w.Scripts)

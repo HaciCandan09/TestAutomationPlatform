@@ -228,6 +228,9 @@ namespace TestAutomationPlatform.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("CategoryId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -236,6 +239,8 @@ namespace TestAutomationPlatform.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
 
                     b.HasIndex("WorkspaceId");
 
@@ -321,11 +326,18 @@ namespace TestAutomationPlatform.Migrations
 
             modelBuilder.Entity("TestAutomationPlatform.Models.TestSuite", b =>
                 {
+                    b.HasOne("TestAutomationPlatform.Models.Category", "Category")
+                        .WithMany("TestSuites")
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("TestAutomationPlatform.Models.Workspace", "Workspace")
                         .WithMany("TestSuites")
                         .HasForeignKey("WorkspaceId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Category");
 
                     b.Navigation("Workspace");
                 });
@@ -333,6 +345,8 @@ namespace TestAutomationPlatform.Migrations
             modelBuilder.Entity("TestAutomationPlatform.Models.Category", b =>
                 {
                     b.Navigation("Scripts");
+
+                    b.Navigation("TestSuites");
                 });
 
             modelBuilder.Entity("TestAutomationPlatform.Models.RunResult", b =>

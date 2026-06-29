@@ -86,11 +86,27 @@
                                 {
                                     <tr>
                                         <td>@workspace.Id</td>
-                                        <td class="fw-semibold">@workspace.Name</td>
+
+                                        <td class="fw-semibold">
+                                            @workspace.Name
+                                        </td>
+
                                         <td>
-                                            <form asp-action="Delete" method="post" class="d-inline">
+                                            <a asp-controller="TestStructure"
+                                               asp-action="Index"
+                                               asp-route-workspaceId="@workspace.Id"
+                                               class="btn btn-sm btn-outline-primary">
+                                                Openen
+                                            </a>
+
+                                            <form asp-action="Delete"
+                                                  method="post"
+                                                  class="d-inline">
                                                 @Html.AntiForgeryToken()
-                                                <input type="hidden" name="id" value="@workspace.Id" />
+
+                                                <input type="hidden"
+                                                       name="id"
+                                                       value="@workspace.Id" />
 
                                                 <button type="submit"
                                                         class="btn btn-sm btn-outline-danger"

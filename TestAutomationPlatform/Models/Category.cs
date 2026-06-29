@@ -11,4 +11,7 @@ public class Category
     public Workspace Workspace { get; set; } = null!;
 
     public ICollection<Script> Scripts { get; set; } = new List<Script>();
+
+    public ICollection<TestSuite> TestSuites { get; set; }
+    = new List<TestSuite>();
 }

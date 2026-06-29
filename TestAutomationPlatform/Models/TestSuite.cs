@@ -10,5 +10,9 @@ public class TestSuite
 
     public Workspace Workspace { get; set; } = null!;
 
+    public int? CategoryId { get; set; }
+
+    public Category? Category { get; set; }
+
     public ICollection<Script> Scripts { get; set; } = new List<Script>();
 }
