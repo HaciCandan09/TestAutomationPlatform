@@ -5,6 +5,7 @@ using Microsoft.Extensions.FileProviders;
 using TestAutomationPlatform.Data;
 using TestAutomationPlatform.Repository;
 using TestAutomationPlatform.Services;
+using TestAutomationPlatform.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +15,7 @@ builder.Services.AddHttpClient<ExternalDefectApiClient>();
 
 // Controllers + Swagger
 builder.Services.AddControllersWithViews();
+builder.Services.AddSignalR();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -99,5 +101,8 @@ app.MapControllerRoute(
 //    x => x.ExecuteRun("Prod"),
 //    Cron.Daily()
 //);
+
+
+app.MapHub<TestResultHub>("/testResultHub");
 
 app.Run();

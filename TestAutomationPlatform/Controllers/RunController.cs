@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-
+using TestAutomationPlatform.Services;
 namespace TestAutomationPlatform.Controllers
 {
     public class RunController : Controller

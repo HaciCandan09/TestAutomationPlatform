@@ -99,11 +99,38 @@ public class TestExecutionService
                             Timeout = 10000
                         });
 
+                        IPage? popupPage = null;
+
+                        var popupTask = page.WaitForPopupAsync(new PageWaitForPopupOptions
+                        {
+                            Timeout = 3000
+                        });
+
                         await page.ClickAsync(step.Selector);
 
-                        await page.WaitForTimeoutAsync(500);
+                        try
+                        {
+                            popupPage = await popupTask;
+                        }
+                        catch (TimeoutException)
+                        {
+                            popupPage = null;
+                        }
 
-                        log.AppendLine($"[{DateTime.Now}] Clicked {step.Selector}");
+                        if (popupPage != null)
+                        {
+                            page = popupPage;
+
+                            await page.WaitForLoadStateAsync(LoadState.DOMContentLoaded);
+
+                            log.AppendLine($"[{DateTime.Now}] Clicked {step.Selector} and switched to new tab");
+                        }
+                        else
+                        {
+                            log.AppendLine($"[{DateTime.Now}] Clicked {step.Selector}");
+                        }
+
+                        await page.WaitForTimeoutAsync(1000);
 
                         await SafeScreenshot(page, runFolder, $"step_{stepIndex}_click.png");
                         break;
@@ -265,14 +292,39 @@ public class TestExecutionService
         {
             stopwatch.Stop();
 
-            log.AppendLine($"[{DateTime.Now}] ERROR: {ex.Message}");
-            Console.WriteLine("ERROR: " + ex.Message);
+            var fullError = ex.ToString();
+
+            log.AppendLine($"[{DateTime.Now}] ERROR FULL:");
+            log.AppendLine(fullError);
+
+            Console.WriteLine("ERROR FULL:");
+            Console.WriteLine(fullError);
 
             if (page != null)
-                await SafeScreenshot(page, runFolder, "error.png");
+            {
+                try
+                {
+                    await SafeScreenshot(page, runFolder, "error.png");
+                }
+                catch (Exception screenshotEx)
+                {
+                    log.AppendLine("Screenshot bij error mislukt:");
+                    log.AppendLine(screenshotEx.ToString());
+                }
+            }
 
             if (browser != null)
-                await browser.CloseAsync();
+            {
+                try
+                {
+                    await browser.CloseAsync();
+                }
+                catch (Exception closeEx)
+                {
+                    log.AppendLine("Browser sluiten mislukt:");
+                    log.AppendLine(closeEx.ToString());
+                }
+            }
 
             return ("Fail", log.ToString(), stopwatch.Elapsed.TotalSeconds, folderName);
         }

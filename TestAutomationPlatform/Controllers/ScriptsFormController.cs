@@ -23,16 +23,19 @@ namespace TestAutomationPlatform.Controllers
         {
             var scriptsQuery = _context.Scripts
                 .Include(s => s.Workspace)
-                .Include(s => s.TestSuite)
                 .Include(s => s.Category)
+                    .ThenInclude(c => c.Workspace)
+                .Include(s => s.TestSuite)
+                    .ThenInclude(ts => ts.Category)
+                        .ThenInclude(c => c.Workspace)
                 .AsQueryable();
 
             if (testSuiteId.HasValue)
             {
                 var testSuite = await _context.TestSuites
-                    .Include(ts => ts.Workspace)
                     .Include(ts => ts.Category)
                         .ThenInclude(c => c.Workspace)
+                    .Include(ts => ts.Workspace)
                     .FirstOrDefaultAsync(ts => ts.Id == testSuiteId.Value);
 
                 if (testSuite == null)
@@ -43,6 +46,7 @@ namespace TestAutomationPlatform.Controllers
                 scriptsQuery = scriptsQuery
                     .Where(s => s.TestSuiteId == testSuiteId.Value);
 
+                ViewBag.IsSuiteView = true;
                 ViewBag.TestSuiteId = testSuite.Id;
                 ViewBag.TestSuiteName = testSuite.Name;
                 ViewBag.CategoryName = testSuite.Category?.Name ?? "Geen categorie";
@@ -50,6 +54,10 @@ namespace TestAutomationPlatform.Controllers
                     testSuite.Category?.Workspace?.Name
                     ?? testSuite.Workspace?.Name
                     ?? "Geen workspace";
+            }
+            else
+            {
+                ViewBag.IsSuiteView = false;
             }
 
             var scripts = await scriptsQuery
@@ -226,17 +234,20 @@ namespace TestAutomationPlatform.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Delete(int id)
+        public async Task<IActionResult> Delete(int id, int? testSuiteId)
         {
             var script = await _context.Scripts.FindAsync(id);
 
             if (script == null)
             {
                 TempData["ErrorMessage"] = "Script niet gevonden.";
-                return RedirectToAction(nameof(Index));
-            }
 
-            var testSuiteId = script.TestSuiteId;
+                return RedirectToAction(
+                    nameof(Index),
+                    testSuiteId.HasValue
+                        ? new { testSuiteId }
+                        : null);
+            }
 
             var hasScheduledRuns = await _context.ScheduledRuns
                 .AnyAsync(sr => sr.ScriptId == id);
@@ -248,7 +259,9 @@ namespace TestAutomationPlatform.Controllers
 
                 return RedirectToAction(
                     nameof(Index),
-                    new { testSuiteId });
+                    testSuiteId.HasValue
+                        ? new { testSuiteId }
+                        : null);
             }
 
             _context.Scripts.Remove(script);
@@ -258,12 +271,14 @@ namespace TestAutomationPlatform.Controllers
 
             return RedirectToAction(
                 nameof(Index),
-                new { testSuiteId });
+                testSuiteId.HasValue
+                    ? new { testSuiteId }
+                    : null);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Run(int id)
+        public async Task<IActionResult> Run(int id, int? testSuiteId)
         {
             var script = await _context.Scripts
                 .AsNoTracking()
@@ -272,19 +287,27 @@ namespace TestAutomationPlatform.Controllers
             if (script == null)
             {
                 TempData["ErrorMessage"] = "Script niet gevonden.";
-                return RedirectToAction(nameof(Index));
+
+                return RedirectToAction(
+                    nameof(Index),
+                    testSuiteId.HasValue
+                        ? new { testSuiteId }
+                        : null);
             }
 
             await _runService.ExecuteRunByScriptId(id);
 
-            TempData["Message"] = $"Script {id} uitgevoerd!";
+            TempData["Message"] = $"Script {id} uitgevoerd.";
 
             return RedirectToAction(
                 nameof(Index),
-                new { testSuiteId = script.TestSuiteId });
+                testSuiteId.HasValue
+                    ? new { testSuiteId }
+                    : null);
         }
 
-        private async Task<ScriptFormViewModel> BuildViewModel(ScriptFormViewModel vm = null)
+        private async Task<ScriptFormViewModel> BuildViewModel(
+            ScriptFormViewModel vm = null)
         {
             vm ??= new ScriptFormViewModel();
 

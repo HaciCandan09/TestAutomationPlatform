@@ -1,113 +1,139 @@
-﻿using TestAutomationPlatform.Repository;
-using TestAutomationPlatform.Services;
+﻿using Microsoft.AspNetCore.SignalR;
 using TestAutomationPlatform.Data;
+using TestAutomationPlatform.Hubs;
 using TestAutomationPlatform.Models;
+using TestAutomationPlatform.Repository;
 
-public class RunService
+namespace TestAutomationPlatform.Services
 {
-    private readonly IScriptRepository _scriptRepo;
-    private readonly TestExecutionService _execution;
-    private readonly AppDbContext _context;
-
-    public RunService(IScriptRepository scriptRepo,
-                      TestExecutionService execution,
-                      AppDbContext context)
+    public class RunService
     {
-        _scriptRepo = scriptRepo;
-        _execution = execution;
-        _context = context;
-    }
+        private readonly IScriptRepository _scriptRepo;
+        private readonly TestExecutionService _execution;
+        private readonly AppDbContext _context;
+        private readonly IHubContext<TestResultHub> _hubContext;
 
-    public async Task ExecuteRun(string environment = "Dev")
-    {
-        var allowedEnvironments = new[] { "Dev", "Preprod", "Prod" };
-
-        if (!allowedEnvironments.Contains(environment))
+        public RunService(
+            IScriptRepository scriptRepo,
+            TestExecutionService execution,
+            AppDbContext context,
+            IHubContext<TestResultHub> hubContext)
         {
-            environment = "Dev";
+            _scriptRepo = scriptRepo;
+            _execution = execution;
+            _context = context;
+            _hubContext = hubContext;
         }
 
-        var run = new Run
+        public async Task ExecuteRun(string environment = "Dev")
         {
-            Environment = environment,
-            ScheduledAt = DateTime.Now,
-            Status = "Running"
-        };
+            var allowedEnvironments = new[] { "Dev", "Preprod", "Prod" };
 
-        _context.Runs.Add(run);
-        await _context.SaveChangesAsync();
+            if (!allowedEnvironments.Contains(environment))
+            {
+                environment = "Dev";
+            }
 
-        var scripts = await _scriptRepo.GetAll();
-        bool hasFailures = false;
+            var run = new Run
+            {
+                Environment = environment,
+                ScheduledAt = DateTime.Now,
+                Status = "Running"
+            };
 
-        foreach (var script in scripts)
+            _context.Runs.Add(run);
+            await _context.SaveChangesAsync();
+
+            var scripts = await _scriptRepo.GetAll();
+            bool hasFailures = false;
+
+            foreach (var script in scripts)
+            {
+                var result = await ExecuteSingleScript(script, environment);
+
+                if (result.status == "Fail")
+                {
+                    hasFailures = true;
+                }
+            }
+
+            run.Status = hasFailures
+                ? "Completed with failures"
+                : "Completed";
+
+            await _context.SaveChangesAsync();
+
+            await _hubContext.Clients.All.SendAsync("TestResultUpdated");
+        }
+
+        public async Task ExecuteRunByScriptId(
+            int scriptId,
+            string environment = "Dev")
         {
+            var allowedEnvironments = new[] { "Dev", "Preprod", "Prod" };
+
+            if (!allowedEnvironments.Contains(environment))
+            {
+                environment = "Dev";
+            }
+
+            var script = await _scriptRepo.GetById(scriptId);
+
+            if (script == null)
+            {
+                throw new Exception($"Script met ID {scriptId} niet gevonden.");
+            }
+
+            var run = new Run
+            {
+                Environment = environment,
+                ScheduledAt = DateTime.Now,
+                Status = "Running"
+            };
+
+            _context.Runs.Add(run);
+            await _context.SaveChangesAsync();
+
             var result = await ExecuteSingleScript(script, environment);
 
-            if (result.status == "Fail")
+            run.Status = result.status == "Fail"
+                ? "Completed with failures"
+                : "Completed";
+
+            await _context.SaveChangesAsync();
+
+            await _hubContext.Clients.All.SendAsync("TestResultUpdated");
+        }
+
+        public async Task ExecuteScheduledScript(
+            int scriptId,
+            string environment)
+        {
+            await ExecuteRunByScriptId(scriptId, environment);
+        }
+
+        private async Task<(string status, string log, double time, string screenshotPath)>
+            ExecuteSingleScript(Script script, string environment)
+        {
+            var result = await _execution.RunScript(script.Code);
+
+            var runResult = new RunResult
             {
-                hasFailures = true;
-            }
+                ScriptId = script.Id,
+                Environment = environment,
+                Status = result.status,
+                Log = result.log,
+                ExecutionTime = result.time,
+                ExecutedAt = DateTime.Now,
+                ScreenshotPath = result.screenshotPath
+            };
+
+            _context.RunResults.Add(runResult);
+            await _context.SaveChangesAsync();
+
+            await _hubContext.Clients.All.SendAsync("TestResultUpdated");
+
+            return result;
         }
-
-        run.Status = hasFailures ? "Completed with failures" : "Completed";
-        await _context.SaveChangesAsync();
-    }
-
-    public async Task ExecuteRunByScriptId(int scriptId, string environment = "Dev")
-    {
-        var allowedEnvironments = new[] { "Dev", "Preprod", "Prod" };
-
-        if (!allowedEnvironments.Contains(environment))
-        {
-            environment = "Dev";
-        }
-
-        var script = await _scriptRepo.GetById(scriptId);
-
-        if (script == null)
-        {
-            throw new Exception($"Script met ID {scriptId} niet gevonden.");
-        }
-
-        var run = new Run
-        {
-            Environment = environment,
-            ScheduledAt = DateTime.Now,
-            Status = "Running"
-        };
-
-        _context.Runs.Add(run);
-        await _context.SaveChangesAsync();
-
-        var result = await ExecuteSingleScript(script, environment);
-
-        run.Status = result.status == "Fail" ? "Completed with failures" : "Completed";
-        await _context.SaveChangesAsync();
-    }
-    //scheduled hangfire scripts execution
-    public async Task ExecuteScheduledScript(int scriptId, string environment)
-    {
-        await ExecuteRunByScriptId(scriptId, environment);
-    }
-
-    private async Task<(string status, string log, double time,string screenshotPath)> ExecuteSingleScript(Script script, string environment)
-    {
-        var result = await _execution.RunScript(script.Code);
-
-        var runResult = new RunResult
-        {
-            ScriptId = script.Id,
-            Environment = environment,
-            Status = result.status,
-            Log = result.log,
-            ExecutionTime = result.time,
-            ExecutedAt = DateTime.Now,
-            ScreenshotPath = result.screenshotPath
-        };
-
-        _context.RunResults.Add(runResult);
-
-        return result;
     }
 }
